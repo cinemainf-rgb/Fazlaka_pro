@@ -1,0 +1,98 @@
+import 'package:flutter/material.dart';
+import '../core/colors.dart';
+import 'pay_pro_tab.dart';
+import 'router_tab.dart';
+
+class MainNavigation extends StatefulWidget {
+  final String host, user, pass;
+  const MainNavigation({super.key, required this.host, required this.user, required this.pass});
+
+  @override
+  State<MainNavigation> createState() => _MainNavigationState();
+}
+
+class _MainNavigationState extends State<MainNavigation> {
+  int _currentIndex = 0;
+
+  // قائمة الشاشات اللي هتتغير مع التبويبات
+  late List<Widget> _screens;
+
+  @override
+  void initState() {
+    super.initState();
+    _screens = [
+      PayProTab(host: widget.host, user: widget.user, pass: widget.pass), // المكن والمبيعات
+      RouterTab(host: widget.host, user: widget.user, pass: widget.pass), // إنشاء كروت الهوتسبوت
+      const Center(child: Text('التقارير - قريباً')), // شاشة التقارير
+    ];
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        backgroundColor: petrol,
+        iconTheme: const IconThemeData(color: Colors.white),
+        title: const Text('Fazlaka Pay', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+        centerTitle: true,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.notifications, color: Colors.white),
+            onPressed: () {},
+          ),
+        ],
+      ),
+      
+      // القائمة الجانبية (Drawer)
+      drawer: Drawer(
+        child: ListView(
+          padding: EdgeInsets.zero,
+          children: [
+            const DrawerHeader(
+              decoration: BoxDecoration(color: petrol),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  Text('القائمة', style: TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold)),
+                  SizedBox(height: 8),
+                  Text('FAZLAKA PAY PRO', style: TextStyle(color: Colors.white70)),
+                ],
+              ),
+            ),
+            ListTile(leading: const Icon(Icons.settings), title: const Text('الإعدادات'), onTap: () {}),
+            ListTile(leading: const Icon(Icons.share), title: const Text('مشاركة واتساب'), onTap: () {}),
+            ListTile(leading: const Icon(Icons.file_download), title: const Text('تصدير JSON'), onTap: () {}),
+            ListTile(leading: const Icon(Icons.file_upload), title: const Text('استيراد'), onTap: () {}),
+            const Divider(),
+            ListTile(
+              leading: const Icon(Icons.lock, color: Colors.red),
+              title: const Text('قفل البرنامج', style: TextStyle(color: Colors.red)),
+              onTap: () => Navigator.pop(context), // هنا تحط دالة القفل
+            ),
+          ],
+        ),
+      ),
+
+      // محتوى الشاشة
+      body: _screens[_currentIndex],
+
+      // التبويبات السفلية (زي الصورة)
+      bottomNavigationBar: BottomNavigationBar(
+        currentIndex: _currentIndex,
+        backgroundColor: Colors.white,
+        selectedItemColor: petrol,
+        unselectedItemColor: Colors.grey,
+        type: BottomNavigationBarType.fixed,
+        onTap: (index) {
+          setState(() { _currentIndex = index; });
+        },
+        items: const [
+          BottomNavigationBarItem(icon: Icon(Icons.atm), label: 'المكن'),
+          BottomNavigationBarItem(icon: Icon(Icons.wifi), label: 'الكروت'),
+          BottomNavigationBarItem(icon: Icon(Icons.bar_chart), label: 'التقارير'),
+        ],
+      ),
+    );
+  }
+}
