@@ -10,344 +10,1417 @@ import 'package:local_auth/local_auth.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-void main() => runApp(const FazlakaPayProApp());
-const petrol = Color(0xFF0A3D3E);
-const bgColor = Color(0xFFDFF5F2);
+void main() {
+  runApp(const FazlakaPayProApp());
+}
 
-class FingerLock extends StatefulWidget { final Widget child; const FingerLock({super.key, required this.child}); @override State<FingerLock> createState() => _FingerLockState(); }
+const Color petrol = Color(0xFF0A3D3E);
+const Color bgColor = Color(0xFFDFF5F2);
+
+class FazlakaPayProApp extends StatelessWidget {
+  const FazlakaPayProApp({super.key});
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      debugShowCheckedModeBanner: false,
+      home: FingerLock(
+        child: PayProHome(),
+      ),
+    );
+  }
+}
+
+class FingerLock extends StatefulWidget {
+  final Widget child;
+  const FingerLock({super.key, required this.child});
+  @override
+  State<FingerLock> createState() => _FingerLockState();
+}
+
 class _FingerLockState extends State<FingerLock> {
-  bool _unlocked = false; bool _noFinger = false;
-  @override void initState() { super.initState(); _tryFinger(); }
-  Future<void> _tryFinger() async {
+  bool unlocked = false;
+  bool noFinger = false;
+
+  @override
+  void initState() {
+    super.initState();
+    tryFinger();
+  }
+
+  Future<void> tryFinger() async {
     final auth = LocalAuthentication();
     try {
       final can = await auth.canCheckBiometrics;
-      if (!can) { setState(() => _noFinger = true); return; }
-      final ok = await auth.authenticate(localizedReason: 'افتح بصمتك عشان تدخل FAZLAKA PAY PRO', options: const AuthenticationOptions(biometricOnly: true, stickyAuth: true));
-      if (ok) setState(() => _unlocked = true);
-    } catch (_) { setState(() => _noFinger = true); }
+      if (!can) {
+        setState(() {
+          noFinger = true;
+        });
+        return;
+      }
+      final ok = await auth.authenticate(
+        localizedReason: 'افتح بصمتك عشان تدخل FAZLAKA PAY PRO',
+        options: const AuthenticationOptions(
+          biometricOnly: true,
+          stickyAuth: true,
+        ),
+      );
+      if (ok) {
+        setState(() {
+          unlocked = true;
+        });
+      }
+    } catch (_) {
+      setState(() {
+        noFinger = true;
+      });
+    }
   }
-  @override Widget build(BuildContext context) {
-    if (_unlocked || _noFinger) return widget.child;
-    return MaterialApp(debugShowCheckedModeBanner: false, home: Scaffold(backgroundColor: bgColor, body: Center(child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-      const Text('FAZLAKA PAY PRO', style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: petrol)),
-      const SizedBox(height: 20),
-      const Icon(Icons.fingerprint, size: 90, color: petrol),
-      const SizedBox(height: 20),
-      const Text('حط بصمتك عشان تفتح', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-      const SizedBox(height: 20),
-      ElevatedButton(style: ElevatedButton.styleFrom(backgroundColor: petrol), onPressed: _tryFinger, child: const Text('جرب البصمة تاني', style: TextStyle(color: Colors.white))),
-    ])))));
+
+  @override
+  Widget build(BuildContext context) {
+    if (unlocked || noFinger) {
+      return widget.child;
+    }
+    return MaterialApp(
+      debugShowCheckedModeBanner: false,
+      home: Scaffold(
+        backgroundColor: bgColor,
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Text(
+                'FAZLAKA PAY PRO',
+                style: TextStyle(
+                  fontSize: 28,
+                  fontWeight: FontWeight.bold,
+                  color: petrol,
+                ),
+              ),
+              const SizedBox(height: 20),
+              const Icon(Icons.fingerprint, size: 90, color: petrol),
+              const SizedBox(height: 20),
+              const Text(
+                'حط بصمتك عشان تفتح',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 20),
+              ElevatedButton(
+                style: ElevatedButton.styleFrom(backgroundColor: petrol),
+                onPressed: tryFinger,
+                child: const Text(
+                  'جرب البصمة تاني',
+                  style: TextStyle(color: Colors.white),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 }
 
-int daysForProfile(String p) { if (p == '20') return 3; if (p == '50') return 15; if (p == '100') return 30; if (p == '200') return 30; return 30; }
-String quotaFor(String p) => p == '20' ? '2' : p == '50' ? '8' : p == '100' ? '20' : p == '200' ? '45' : '2';
-String bytesFor(String p) => p == '20' ? '2147483648' : p == '50' ? '8589934592' : p == '100' ? '21474836480' : p == '200' ? '48318382080' : '2147483648';
-int parseTime(String s) { if (s.isEmpty) return 0; if (s.contains(':')) { int days = 0; String rest = s; if (s.contains('d')) { final parts = s.split('d'); days = int.tryParse(parts[0]) ?? 0; rest = parts.length > 1 ? parts[1] : '0:0:0'; } final p = rest.split(':'); int h = 0, m = 0, sec = 0; if (p.length == 3) { h = int.tryParse(p[0]) ?? 0; m = int.tryParse(p[1]) ?? 0; sec = int.tryParse(p[2]) ?? 0; } else if (p.length == 2) { m = int.tryParse(p[0]) ?? 0; sec = int.tryParse(p[1]) ?? 0; } return days * 86400 + h * 3600 + m * 60 + sec; } int total = 0; final reg = RegExp(r'(\d+)([dhms])'); for (final m in reg.allMatches(s)) { final v = int.tryParse(m.group(1) ?? '0') ?? 0; final u = m.group(2); if (u == 'd') total += v * 86400; if (u == 'h') total += v * 3600; if (u == 'm') total += v * 60; if (u == 's') total += v; } if (total == 0) total = int.tryParse(s) ?? 0; return total; }
-int _toInt(dynamic v) { if (v is int) return v; if (v is double) return v.toInt(); if (v is String) return int.tryParse(v) ?? 0; if (v is num) return v.toInt(); return 0; }
-String monthKeyOf(DateTime d) => '${d.year}-${d.month.toString().padLeft(2, '0')}';
-String monthLabel(String k) { final p = k.split('-'); const ms = ['', 'يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو', 'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر']; final mi = int.tryParse(p[1]) ?? 1; return '${ms[mi]} ${p[0]}'; }
-Future<void> saveMonthlySale(String profile, int count) async { final sp = await SharedPreferences.getInstance(); final month = monthKeyOf(DateTime.now()); List<Map<String, dynamic>> all = []; final raw = sp.getString('sales_all'); if (raw != null && raw.isNotEmpty) { try { all = List<Map<String, dynamic>>.from(jsonDecode(raw)); } catch (_) {} } final price = _toInt(profile); for (int i = 0; i < count; i++) { all.add({'m': month, 'p': profile, 'pr': price, 'd': DateTime.now().millisecondsSinceEpoch}); } await sp.setString('sales_all', jsonEncode(all)); }
-Future<List<Map<String, dynamic>>> loadAllSales() async { final sp = await SharedPreferences.getInstance(); final raw = sp.getString('sales_all'); if (raw == null || raw.isEmpty) return []; try { return List<Map<String, dynamic>>.from(jsonDecode(raw)); } catch (_) { return []; } }
-Future<void> saveMonthlyExpense(int amount, String note) async { final sp = await SharedPreferences.getInstance(); final month = monthKeyOf(DateTime.now()); List<Map<String, dynamic>> all = []; final raw = sp.getString('expenses_all'); if (raw != null && raw.isNotEmpty) { try { all = List<Map<String, dynamic>>.from(jsonDecode(raw)); } catch (_) {} } all.add({'m': month, 'a': amount, 'n': note, 'd': DateTime.now().millisecondsSinceEpoch}); await sp.setString('expenses_all', jsonEncode(all)); }
-Future<List<Map<String, dynamic>>> loadAllExpenses() async { final sp = await SharedPreferences.getInstance(); final raw = sp.getString('expenses_all'); if (raw == null || raw.isEmpty) return []; try { return List<Map<String, dynamic>>.from(jsonDecode(raw)); } catch (_) { return []; } }
+String quotaFor(String p) {
+  if (p == '20') return '2';
+  if (p == '50') return '8';
+  if (p == '100') return '20';
+  if (p == '200') return '45';
+  return '2';
+}
+
+int daysForProfile(String p) {
+  if (p == '20') return 3;
+  if (p == '50') return 15;
+  if (p == '100') return 30;
+  if (p == '200') return 30;
+  return 30;
+}
+
+String bytesFor(String p) {
+  if (p == '20') return '2147483648';
+  if (p == '50') return '8589934592';
+  if (p == '100') return '21474836480';
+  if (p == '200') return '48318382080';
+  return '2147483648';
+}
 
 class MikroTikApi {
-  Socket? _socket; List<int> _buf = [];
-  Future<List<Map<String,String>>> run(String host, String user, String pass, String cmd, [List<String> args = const []]) async {
-    try { return await _runWithLogin(host, user, pass, cmd, args, useChallenge: true); } catch (_) { return await _runWithLogin(host, user, pass, cmd, args, useChallenge: false); }
-  }
-  Future<List<Map<String,String>>> _runWithLogin(String host, String user, String pass, String cmd, List<String> args, {required bool useChallenge}) async {
-    _buf = [];
-    try {
-      _socket = await Socket.connect(host, 8728, timeout: const Duration(seconds: 8));
-      _socket!.listen((d) { _buf.addAll(d); });
-      if (useChallenge) {
-        final chalHex = await _loginStep(user);
-        List<int> hexToBytes(String hex) { final out = <int>[]; for (int i = 0; i < hex.length; i += 2) out.add(int.parse(hex.substring(i, i + 2), radix: 16)); return out; }
-        final respHash = md5.convert([0, ...utf8.encode(pass), ...hexToBytes(chalHex)]).toString();
-        await _send(['/login', '=name=$user', '=response=00$respHash']);
-      } else {
-        await _send(['/login', '=name=$user', '=password=$pass']);
-      }
-      final loginRes = await _readSentence();
-      if (loginRes.any((m) => m['__type__'] == '!trap')) throw Exception('login failed');
-      if (loginRes.any((m) => m['__type__'] == '!fatal')) throw Exception('login failed');
-      await _send([cmd, ...args]); final result = await _readAll(); return result;
-    } finally { try { await _socket?.close(); } catch (_) {} _socket = null; _buf = []; }
-  }
-  Future<String> _loginStep(String user) async { await _send(['/login', '=name=$user']); final res = await _readSentence(); for (final m in res) { if (m.containsKey('ret')) return m['ret']!; } throw Exception('no challenge'); }
-  Future<void> _send(List<String> words) async { final out = <int>[]; for (final w in words) { final b = utf8.encode(w); if (b.length < 0x80) { out.add(b.length); } else if (b.length < 0x4000) { out.add(0x80 | (b.length >> 8)); out.add(b.length & 0xFF); } else { out.add(0xC0 | (b.length >> 16)); out.add((b.length >> 8) & 0xFF); out.add(b.length & 0xFF); } out.addAll(b); } out.add(0); _socket!.add(out); await _socket!.flush(); }
-  Future<List<Map<String,String>>> _readSentence() async { while (true) { final parsed = _tryParse(); if (parsed != null) return parsed; await Future.delayed(const Duration(milliseconds: 20)); } }
-  Future<List<Map<String,String>>> _readAll() async { final all = <Map<String,String>>[]; while (true) { final s = await _readSentence(); all.addAll(s); if (s.any((m) => m['__type__'] == '!done')) break; } return all; }
-  List<Map<String,String>>? _tryParse() { int pos = 0; final result = <Map<String,String>>[]; var cur = <String,String>{}; while (pos < _buf.length) { int len = _buf[pos]; pos++; if (len == 0) { if (cur.isNotEmpty) { result.add(cur); cur = <String,String>{}; } _buf = _buf.sublist(pos); return result; } if ((len & 0x80) != 0) { if ((len & 0xC0) == 0x80) { if (pos >= _buf.length) return null; len = ((len & 0x3F) << 8) | _buf[pos]; pos++; } else if ((len & 0xE0) == 0xC0) { if (pos + 1 >= _buf.length) return null; len = ((len & 0x1F) << 16) | (_buf[pos] << 8) | _buf[pos+1]; pos += 2; } else return null; } if (pos + len > _buf.length) return null; final word = utf8.decode(_buf.sublist(pos, pos + len), allowMalformed: true); pos += len; if (word.startsWith('!')) { if (cur.isNotEmpty) { result.add(cur); cur = <String,String>{}; } cur['__type__'] = word; } else if (word.startsWith('=')) { final eq = word.indexOf('=', 1); if (eq > 0) cur[word.substring(1, eq)] = word.substring(eq + 1); } else if (word.startsWith('.')) { final eq = word.indexOf('='); if (eq > 0) cur[word.substring(0, eq)] = word.substring(eq + 1); } } return null; }
-}
-bool isExpiredReal(Map<String,String> u) { final profile = u['profile'] ?? ''; final days = daysForProfile(profile); final comment = u['comment'] ?? ''; if (comment.contains('created:')) { try { final dateStr = comment.split('created:')[1].split(' ')[0].split('|')[0].trim(); final created = DateTime.parse(dateStr); final diffDays = DateTime.now().difference(created).inDays; if (diffDays >= days) return true; return false; } catch (_) {} } final limitTime = u['limit-uptime'] ?? ''; final up = u['uptime'] ?? ''; if (limitTime.isNotEmpty) { final limitSec = parseTime(limitTime); final upSec = parseTime(up); if (limitSec > 0 && upSec >= limitSec) return true; } final limitBytesStr = u['limit-bytes-total'] ?? ''; if (limitBytesStr.isNotEmpty) { final limitBytes = int.tryParse(limitBytesStr) ?? 0; final inBytes = int.tryParse(u['bytes-in'] ?? '0') ?? 0; final outBytes = int.tryParse(u['bytes-out'] ?? '0') ?? 0; if (limitBytes > 0 && (inBytes + outBytes) >= limitBytes) return true; } return false; }
-int remainingDays(Map<String,String> u) { final profile = u['profile'] ?? ''; final days = daysForProfile(profile); final comment = u['comment'] ?? ''; if (comment.contains('created:')) { try { final dateStr = comment.split('created:')[1].split(' ')[0].split('|')[0].trim(); final created = DateTime.parse(dateStr); final diff = DateTime.now().difference(created).inDays; final left = days - diff; return left < 0 ? 0 : left; } catch (_) { return days; } } return days; }
-Future<int> disableExpiredUsers(String host, String user, String pass) async { int disabled = 0; try { final users = await MikroTikApi().run(host, user, pass, '/ip/hotspot/user/print'); for (final u in users) { if (!isExpiredReal(u)) continue; if ((u['disabled'] ?? 'false') == 'true') continue; final id = u['.id'] ?? ''; if (id.isNotEmpty) { await MikroTikApi().run(host, user, pass, '/ip/hotspot/user/set', ['=numbers=$id', '=disabled=yes']); disabled++; } } } catch (_) {} return disabled; }
-Future<int> deleteDisabledUsers(String host, String user, String pass) async { int deleted = 0; try { final users = await MikroTikApi().run(host, user, pass, '/ip/hotspot/user/print'); for (final u in users) { final isDis = (u['disabled'] ?? 'false') == 'true'; if (!isDis) continue; final id = u['.id'] ?? ''; if (id.isNotEmpty) { await MikroTikApi().run(host, user, pass, '/ip/hotspot/user/remove', ['=numbers=$id']); deleted++; } } } catch (_) {} return deleted; }
+  Socket? socket;
+  List<int> buf = [];
 
-class FazlakaPayProApp extends StatelessWidget { const FazlakaPayProApp({super.key}); @override Widget build(BuildContext context) { return MaterialApp(debugShowCheckedModeBanner: false, home: FingerLock(child: PayProHome())); } }
-class PayProHome extends StatefulWidget { const PayProHome({super.key}); @override State<PayProHome> createState() => _PayProHomeState(); }
+  Future<List<Map<String, String>>> run(
+    String host,
+    String user,
+    String pass,
+    String cmd,
+    [List<String> args = const []],
+  ) async {
+    try {
+      return await runLogin(host, user, pass, cmd, args, true);
+    } catch (_) {
+      return await runLogin(host, user, pass, cmd, args, false);
+    }
+  }
+
+  Future<List<Map<String, String>>> runLogin(
+    String host,
+    String user,
+    String pass,
+    String cmd,
+    List<String> args,
+    bool useChallenge,
+  ) async {
+    buf = [];
+    try {
+      socket = await Socket.connect(host, 8728, timeout: const Duration(seconds: 8));
+      socket!.listen((d) {
+        buf.addAll(d);
+      });
+      if (useChallenge) {
+        final chal = await loginStep(user);
+        List<int> hexToBytes(String hex) {
+          final out = <int>[];
+          for (int i = 0; i < hex.length; i += 2) {
+            out.add(int.parse(hex.substring(i, i + 2), radix: 16));
+          }
+          return out;
+        }
+        final resp = md5.convert([0, ...utf8.encode(pass), ...hexToBytes(chal)]).toString();
+        await send(['/login', '=name=$user', '=response=00$resp']);
+      } else {
+        await send(['/login', '=name=$user', '=password=$pass']);
+      }
+      final loginRes = await readSentence();
+      if (loginRes.any((m) => m['__type__'] == '!trap')) {
+        throw Exception('login failed');
+      }
+      await send([cmd, ...args]);
+      final result = await readAll();
+      return result;
+    } finally {
+      try {
+        await socket?.close();
+      } catch (_) {}
+      socket = null;
+      buf = [];
+    }
+  }
+
+  Future<String> loginStep(String user) async {
+    await send(['/login', '=name=$user']);
+    final res = await readSentence();
+    for (final m in res) {
+      if (m.containsKey('ret')) return m['ret']!;
+    }
+    throw Exception('no challenge');
+  }
+
+  Future<void> send(List<String> words) async {
+    final out = <int>[];
+    for (final w in words) {
+      final b = utf8.encode(w);
+      if (b.length < 0x80) {
+        out.add(b.length);
+      } else if (b.length < 0x4000) {
+        out.add(0x80 | (b.length >> 8));
+        out.add(b.length & 0xFF);
+      } else {
+        out.add(0xC0 | (b.length >> 16));
+        out.add((b.length >> 8) & 0xFF);
+        out.add(b.length & 0xFF);
+      }
+      out.addAll(b);
+    }
+    out.add(0);
+    socket!.add(out);
+    await socket!.flush();
+  }
+
+  Future<List<Map<String, String>>> readSentence() async {
+    while (true) {
+      final parsed = tryParse();
+      if (parsed != null) return parsed;
+      await Future.delayed(const Duration(milliseconds: 20));
+    }
+  }
+
+  Future<List<Map<String, String>>> readAll() async {
+    final all = <Map<String, String>>[];
+    while (true) {
+      final s = await readSentence();
+      all.addAll(s);
+      if (s.any((m) => m['__type__'] == '!done')) break;
+    }
+    return all;
+  }
+
+  List<Map<String, String>>? tryParse() {
+    int pos = 0;
+    final result = <Map<String, String>>[];
+    var cur = <String, String>{};
+    while (pos < buf.length) {
+      int len = buf[pos];
+      pos++;
+      if (len == 0) {
+        if (cur.isNotEmpty) {
+          result.add(cur);
+          cur = <String, String>{};
+        }
+        buf = buf.sublist(pos);
+        return result;
+      }
+      if ((len & 0x80) != 0) {
+        if ((len & 0xC0) == 0x80) {
+          if (pos >= buf.length) return null;
+          len = ((len & 0x3F) << 8) | buf[pos];
+          pos++;
+        } else if ((len & 0xE0) == 0xC0) {
+          if (pos + 1 >= buf.length) return null;
+          len = ((len & 0x1F) << 16) | (buf[pos] << 8) | buf[pos + 1];
+          pos += 2;
+        } else {
+          return null;
+        }
+      }
+      if (pos + len > buf.length) return null;
+      final word = utf8.decode(buf.sublist(pos, pos + len), allowMalformed: true);
+      pos += len;
+      if (word.startsWith('!')) {
+        if (cur.isNotEmpty) {
+          result.add(cur);
+          cur = <String, String>{};
+        }
+        cur['__type__'] = word;
+      } else if (word.startsWith('=')) {
+        final eq = word.indexOf('=', 1);
+        if (eq > 0) {
+          cur[word.substring(1, eq)] = word.substring(eq + 1);
+        }
+      }
+    }
+    return null;
+  }
+}
+
+class PayProHome extends StatefulWidget {
+  const PayProHome({super.key});
+  @override
+  State<PayProHome> createState() => _PayProHomeState();
+}
+
 class _PayProHomeState extends State<PayProHome> {
-  int _tab = 0;
-  @override Widget build(BuildContext context) {
-    if (_tab == 1) { return Scaffold(body: const FazlakaApp(), bottomNavigationBar: _bottomBar()); }
-    if (_tab == 2) { return Scaffold(body: const PayProScreen(), bottomNavigationBar: _bottomBar()); }
+  int tab = 0;
+
+  @override
+  Widget build(BuildContext context) {
+    if (tab == 1) {
+      return Scaffold(
+        body: const FazlakaApp(),
+        bottomNavigationBar: bottomBar(),
+      );
+    }
+    if (tab == 2) {
+      return Scaffold(
+        body: const PayProScreen(),
+        bottomNavigationBar: bottomBar(),
+      );
+    }
     return Scaffold(
       backgroundColor: bgColor,
-      appBar: AppBar(backgroundColor: petrol, title: const Text('FAZLAKA PAY PRO', style: TextStyle(color: Colors.white)), centerTitle: true),
-      body: Padding(padding: const EdgeInsets.all(20), child: Column(children: [
-        const SizedBox(height: 20),
-        const Text('FAZLAKA PAY PRO', style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: petrol)),
-        const Text('01016620065 - 01141418040'),
-        const SizedBox(height: 30),
-        GestureDetector(onTap: () => setState(() => _tab = 1), child: Container(width: double.infinity, padding: const EdgeInsets.all(24), decoration: BoxDecoration(color: petrol, borderRadius: BorderRadius.circular(20)), child: const Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Icon(Icons.wifi, color: Colors.white, size: 40), SizedBox(height: 12), Text('FAZLAKA', style: TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold)), Text('كروت - هوتسبوت - PPPoE - مبيعات', style: TextStyle(color: Colors.white70))]))),
-        const SizedBox(height: 16),
-        GestureDetector(onTap: () => setState(() => _tab = 2), child: Container(width: double.infinity, padding: const EdgeInsets.all(24), decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(20)), child: const Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Icon(Icons.account_balance_wallet, color: petrol, size: 40), SizedBox(height: 12), Text('Pay Pro', style: TextStyle(color: petrol, fontSize: 24, fontWeight: FontWeight.bold)), Text('محفظة - شحن - دفع فواتير - تحويل', style: TextStyle(color: Colors.grey))]))),
-      ])),
-      bottomNavigationBar: _bottomBar(),
+      appBar: AppBar(
+        backgroundColor: petrol,
+        title: const Text('FAZLAKA PAY PRO', style: TextStyle(color: Colors.white)),
+        centerTitle: true,
+      ),
+      body: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          children: [
+            const SizedBox(height: 20),
+            const Text(
+              'FAZLAKA PAY PRO',
+              style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: petrol),
+            ),
+            const Text('01016620065 - 01141418040'),
+            const SizedBox(height: 30),
+            GestureDetector(
+              onTap: () {
+                setState(() {
+                  tab = 1;
+                });
+              },
+              child: Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(24),
+                decoration: BoxDecoration(color: petrol, borderRadius: BorderRadius.circular(20)),
+                child: const Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Icon(Icons.wifi, color: Colors.white, size: 40),
+                    SizedBox(height: 12),
+                    Text('FAZLAKA', style: TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold)),
+                    Text('كروت - هوتسبوت - PPPoE - مبيعات', style: TextStyle(color: Colors.white70)),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            GestureDetector(
+              onTap: () {
+                setState(() {
+                  tab = 2;
+                });
+              },
+              child: Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(24),
+                decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(20)),
+                child: const Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Icon(Icons.account_balance_wallet, color: petrol, size: 40),
+                    SizedBox(height: 12),
+                    Text('Pay Pro', style: TextStyle(color: petrol, fontSize: 24, fontWeight: FontWeight.bold)),
+                    Text('محفظة - شحن - دفع فواتير - تحويل', style: TextStyle(color: Colors.grey)),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+      bottomNavigationBar: bottomBar(),
     );
   }
-  Widget _bottomBar() { return BottomNavigationBar(currentIndex: _tab, backgroundColor: petrol, selectedItemColor: Colors.white, unselectedItemColor: Colors.white70, type: BottomNavigationBarType.fixed, onTap: (i) => setState(() => _tab = i), items: const [BottomNavigationBarItem(icon: Icon(Icons.home), label: 'الرئيسية'), BottomNavigationBarItem(icon: Icon(Icons.wifi), label: 'FAZLAKA'), BottomNavigationBarItem(icon: Icon(Icons.account_balance_wallet), label: 'Pay Pro')]); }
+
+  Widget bottomBar() {
+    return BottomNavigationBar(
+      currentIndex: tab,
+      backgroundColor: petrol,
+      selectedItemColor: Colors.white,
+      unselectedItemColor: Colors.white70,
+      type: BottomNavigationBarType.fixed,
+      onTap: (i) {
+        setState(() {
+          tab = i;
+        });
+      },
+      items: const [
+        BottomNavigationBarItem(icon: Icon(Icons.home), label: 'الرئيسية'),
+        BottomNavigationBarItem(icon: Icon(Icons.wifi), label: 'FAZLAKA'),
+        BottomNavigationBarItem(icon: Icon(Icons.account_balance_wallet), label: 'Pay Pro'),
+      ],
+    );
+  }
 }
 
-class PayProScreen extends StatefulWidget { const PayProScreen({super.key}); @override State<PayProScreen> createState() => _PayProScreenState(); }
+class PayProScreen extends StatefulWidget {
+  const PayProScreen({super.key});
+  @override
+  State<PayProScreen> createState() => _PayProScreenState();
+}
+
 class _PayProScreenState extends State<PayProScreen> {
-  int _tab = 0;
-  List<Map<String,dynamic>> _wallets = [];
-  List<Map<String,dynamic>> _products = [];
-  List<Map<String,dynamic>> _sales = [];
-  String _selectedMachine = 'فوري رئيسي';
-  final _nameCtrl = TextEditingController(); final _qtyCtrl = TextEditingController(); final _buyCtrl = TextEditingController(); final _sellCtrl = TextEditingController();
-  final _scaffoldKey = GlobalKey<ScaffoldState>();
-  @override void initState() { super.initState(); _load(); }
-  Future<void> _load() async {
+  int tab = 0;
+  List<Map<String, dynamic>> wallets = [];
+  List<Map<String, dynamic>> sales = [];
+  String selectedMachine = 'فوري رئيسي';
+  final nameCtrl = TextEditingController();
+  final qtyCtrl = TextEditingController();
+  final buyCtrl = TextEditingController();
+  final sellCtrl = TextEditingController();
+
+  @override
+  void initState() {
+    super.initState();
+    loadData();
+  }
+
+  Future<void> loadData() async {
     final sp = await SharedPreferences.getInstance();
     final wRaw = sp.getString('pay_wallets');
-    if (wRaw != null) { _wallets = List<Map<String,dynamic>>.from(jsonDecode(wRaw)); } else {
-      _wallets = [
-        {'name':'الخزنة الرئيسية','bal':0.0,'limit':0.0},
-        {'name':'نقدية (كاش الدرج)','bal':0.0,'limit':0.0},
-        {'name':'إنستاباي','bal':0.0,'limit':4000.0},
-        {'name':'فودافون كاش','bal':0.0,'limit':2000.0},
-        {'name':'فوري رئيسي','bal':0.0,'limit':0.0},
-        {'name':'فوري كروت','bal':0.0,'limit':0.0},
-        {'name':'فوري كاش أوت','bal':0.0,'limit':0.0},
-        {'name':'بساطة','bal':0.0,'limit':0.0},
-        {'name':'موبايل','bal':0.0,'limit':0.0},
-        {'name':'كاش مصر','bal':0.0,'limit':0.0},
+    if (wRaw != null) {
+      wallets = List<Map<String, dynamic>>.from(jsonDecode(wRaw));
+    } else {
+      wallets = [
+        {'name': 'الخزنة الرئيسية', 'bal': 0.0, 'limit': 0.0},
+        {'name': 'نقدية (كاش الدرج)', 'bal': 0.0, 'limit': 0.0},
+        {'name': 'إنستاباي', 'bal': 0.0, 'limit': 4000.0},
+        {'name': 'فودافون كاش', 'bal': 0.0, 'limit': 2000.0},
+        {'name': 'فوري رئيسي', 'bal': 0.0, 'limit': 0.0},
+        {'name': 'فوري كروت', 'bal': 0.0, 'limit': 0.0},
+        {'name': 'فوري كاش أوت', 'bal': 0.0, 'limit': 0.0},
+        {'name': 'بساطة', 'bal': 0.0, 'limit': 0.0},
+        {'name': 'موبايل', 'bal': 0.0, 'limit': 0.0},
+        {'name': 'كاش مصر', 'bal': 0.0, 'limit': 0.0},
       ];
     }
-    final pRaw = sp.getString('pay_products'); if (pRaw != null) _products = List<Map<String,dynamic>>.from(jsonDecode(pRaw));
-    final sRaw = sp.getString('pay_sales2'); if (sRaw != null) _sales = List<Map<String,dynamic>>.from(jsonDecode(sRaw));
+    final sRaw = sp.getString('pay_sales2');
+    if (sRaw != null) {
+      sales = List<Map<String, dynamic>>.from(jsonDecode(sRaw));
+    }
     setState(() {});
   }
-  Future<void> _save() async { final sp = await SharedPreferences.getInstance(); await sp.setString('pay_wallets', jsonEncode(_wallets)); await sp.setString('pay_products', jsonEncode(_products)); await sp.setString('pay_sales2', jsonEncode(_sales)); }
-  double get _todaySales { final today = DateTime.now().toString().substring(0,10); double t=0; for(final s in _sales){ if((s['date']??'').toString().startsWith(today)) t += (s['total'] as num).toDouble(); } return t; }
-  double get _todayProfit { final today = DateTime.now().toString().substring(0,10); double t=0; for(final s in _sales){ if((s['date']??'').toString().startsWith(today)) t += (s['profit'] as num).toDouble(); } return t; }
-  double get _cashDrawer { final w = _wallets.where((e)=>e['name'].toString().contains('الدرج')); if(w.isEmpty) return 0; return (w.first['bal'] as num).toDouble(); }
-  Future<void> _charge() async {
-    final c = TextEditingController(); final amt = await showDialog<double>(context: context, builder: (_) => AlertDialog(title: const Text('شحن'), content: TextField(controller: c, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'المبلغ')), actions: [TextButton(onPressed: ()=>Navigator.pop(context), child: const Text('الغاء')), TextButton(onPressed: ()=>Navigator.pop(context, double.tryParse(c.text)??0), child: const Text('شحن'))]));
-    if (amt != null && amt > 0) { setState(() { final i = _wallets.indexWhere((e)=>e['name']==_selectedMachine); if(i>=0) _wallets[i]['bal'] = (_wallets[i]['bal'] as num).toDouble() + amt; _sales.insert(0, {'name':'شحن $_selectedMachine','total':amt,'profit':0,'date':DateTime.now().toString()}); }); await _save(); }
+
+  Future<void> saveData() async {
+    final sp = await SharedPreferences.getInstance();
+    await sp.setString('pay_wallets', jsonEncode(wallets));
+    await sp.setString('pay_sales2', jsonEncode(sales));
   }
-  Future<void> _addProduct() async {
-    final name = _nameCtrl.text.trim(); final qty = double.tryParse(_qtyCtrl.text)??0; final buy = double.tryParse(_buyCtrl.text)??0; final sell = double.tryParse(_sellCtrl.text)??0;
-    if (name.isEmpty || qty<=0 || sell<=0) return;
-    setState(() { _products.add({'name':name,'qty':qty,'buy':buy,'sell':sell}); _sales.insert(0, {'name':name,'total':qty*sell,'profit':qty*(sell-buy),'date':DateTime.now().toString()}); _nameCtrl.clear(); _qtyCtrl.clear(); _buyCtrl.clear(); _sellCtrl.clear(); });
-    await _save();
-    if(mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('تمت إضافة المنتج')));
+
+  double get todaySales {
+    final today = DateTime.now().toString().substring(0, 10);
+    double t = 0;
+    for (final s in sales) {
+      if ((s['date'] ?? '').toString().startsWith(today)) {
+        t += (s['total'] as num).toDouble();
+      }
+    }
+    return t;
   }
-  @override Widget build(BuildContext context) {
+
+  double get todayProfit {
+    final today = DateTime.now().toString().substring(0, 10);
+    double t = 0;
+    for (final s in sales) {
+      if ((s['date'] ?? '').toString().startsWith(today)) {
+        t += (s['profit'] as num).toDouble();
+      }
+    }
+    return t;
+  }
+
+  Future<void> charge() async {
+    final c = TextEditingController();
+    final amt = await showDialog<double>(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text('شحن'),
+        content: TextField(
+          controller: c,
+          keyboardType: TextInputType.number,
+          decoration: const InputDecoration(labelText: 'المبلغ'),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('الغاء'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, double.tryParse(c.text) ?? 0),
+            child: const Text('شحن'),
+          ),
+        ],
+      ),
+    );
+    if (amt != null && amt > 0) {
+      setState(() {
+        final i = wallets.indexWhere((e) => e['name'] == selectedMachine);
+        if (i >= 0) {
+          wallets[i]['bal'] = (wallets[i]['bal'] as num).toDouble() + amt;
+        }
+        sales.insert(0, {
+          'name': 'شحن $selectedMachine',
+          'total': amt,
+          'profit': 0,
+          'date': DateTime.now().toString(),
+        });
+      });
+      await saveData();
+    }
+  }
+
+  Future<void> addProduct() async {
+    final name = nameCtrl.text.trim();
+    final qty = double.tryParse(qtyCtrl.text) ?? 0;
+    final buy = double.tryParse(buyCtrl.text) ?? 0;
+    final sell = double.tryParse(sellCtrl.text) ?? 0;
+    if (name.isEmpty || qty <= 0 || sell <= 0) return;
+    setState(() {
+      sales.insert(0, {
+        'name': name,
+        'total': qty * sell,
+        'profit': qty * (sell - buy),
+        'date': DateTime.now().toString(),
+      });
+      nameCtrl.clear();
+      qtyCtrl.clear();
+      buyCtrl.clear();
+      sellCtrl.clear();
+    });
+    await saveData();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     return Scaffold(
-      key: _scaffoldKey,
-      backgroundColor: const Color(0xFFDFF5F2),
-      appBar: PreferredSize(preferredSize: const Size.fromHeight(70), child: AppBar(backgroundColor: petrol, title: Column(children: [const Text('Fazlaka Pay', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)), Text('2026/11/18', style: const TextStyle(color: Colors.white70, fontSize: 13))]), centerTitle: true, leading: IconButton(icon: const Icon(Icons.menu, color: Colors.white, size: 28), onPressed: ()=>_scaffoldKey.currentState?.openDrawer()), actions: [IconButton(icon: const Icon(Icons.dark_mode, color: Colors.amber, size: 28), onPressed: (){}), Stack(children: [IconButton(icon: const Icon(Icons.notifications, color: Colors.amber, size: 30), onPressed: (){}), Positioned(right: 6, top: 6, child: Container(padding: const EdgeInsets.all(4), decoration: const BoxDecoration(color: Colors.red, shape: BoxShape.circle), child: const Text('6', style: TextStyle(color: Colors.white, fontSize: 10))))])]))),
-      drawer: Drawer(child: ListView(children: [
-        Container(color: const Color(0xFFDFF5F2), padding: const EdgeInsets.all(16), child: Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [IconButton(icon: const Icon(Icons.close), onPressed: ()=>Navigator.pop(context)), const Text('القائمة', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold))]))),
-        _drawerItem('المكن', ()=>{Navigator.pop(context), setState(()=>_tab=0)}),
-        _drawerItem('المبيعات', ()=>{Navigator.pop(context), setState(()=>_tab=1)}),
-        _drawerItem('المحافظ والخزنة', ()=>{Navigator.pop(context), setState(()=>_tab=2)}),
-        _drawerItem('التقارير', ()=>{Navigator.pop(context), setState(()=>_tab=3)}),
-        const Divider(),
-        _drawerItem('الإعدادات', (){Navigator.pop(context);}),
-        _drawerItem('مشاركة واتساب', (){Navigator.pop(context);}),
-        _drawerItem('تصدير JSON', (){Navigator.pop(context);}),
-        _drawerItem('تصدير CSV', (){Navigator.pop(context);}),
-        _drawerItem('استيراد', (){Navigator.pop(context);}),
-        _drawerItem('وضع الصيانة', (){Navigator.pop(context);}),
-        const SizedBox(height: 10),
-        Padding(padding: const EdgeInsets.symmetric(horizontal: 16), child: SizedBox(height: 50, child: ElevatedButton(style: ElevatedButton.styleFrom(backgroundColor: Colors.red), onPressed: (){}, child: const Text('قفل البرنامج', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold))))),
-      ])),
-      body: SingleChildScrollView(padding: const EdgeInsets.all(12), child: Column(children: [
-        Row(children: [Expanded(child: _topCard('النقدية (الدرج)', '$_cashDrawer')), const SizedBox(width: 10), Expanded(child: _topCard('ربح اليوم', '$_todayProfit', gold: true))]),
-        const SizedBox(height: 10),
-        Row(children: [Expanded(child: _topCard('المبيعات', '$_todaySales')), const SizedBox(width: 10), Expanded(child: _topCard('الديون', '0', red: true))]),
-        const SizedBox(height: 10),
-        Container(width: double.infinity, padding: const EdgeInsets.all(16), decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16)), child: Column(crossAxisAlignment: CrossAxisAlignment.end, children: [const Text('عدد العمليات', style: TextStyle(color: Colors.grey)), Text('${_sales.length}', style: const TextStyle(fontSize: 26, fontWeight: FontWeight.bold))])),
-        const SizedBox(height: 12),
-        if (_tab==0) _machineTab(),
-        if (_tab==1) _salesTab(),
-        if (_tab==2) _walletsTab(),
-        if (_tab==3) _reportsTab(),
-      ])),
-      bottomNavigationBar: BottomNavigationBar(currentIndex: _tab, backgroundColor: Colors.white, selectedItemColor: petrol, unselectedItemColor: Colors.grey, type: BottomNavigationBarType.fixed, onTap: (i)=>setState(()=>_tab=i), items: const [BottomNavigationBarItem(icon: Icon(Icons.atm), label: 'المكن'), BottomNavigationBarItem(icon: Icon(Icons.shopping_cart), label: 'مبيعات'), BottomNavigationBarItem(icon: Icon(Icons.credit_card), label: 'المحافظ'), BottomNavigationBarItem(icon: Icon(Icons.bar_chart), label: 'التقارير')]),
-      floatingActionButton: FloatingActionButton(backgroundColor: petrol, onPressed: _charge, child: const Icon(Icons.add, color: Colors.white, size: 30)),
+      backgroundColor: bgColor,
+      appBar: AppBar(
+        backgroundColor: petrol,
+        title: const Text('Fazlaka Pay', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+        centerTitle: true,
+      ),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          children: [
+            Row(
+              children: [
+                Expanded(child: topCard('ربح اليوم', '$todayProfit')),
+                const SizedBox(width: 10),
+                Expanded(child: topCard('المبيعات', '$todaySales')),
+              ],
+            ),
+            const SizedBox(height: 10),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16)),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  const Text('عدد العمليات', style: TextStyle(color: Colors.grey)),
+                  Text('${sales.length}', style: const TextStyle(fontSize: 26, fontWeight: FontWeight.bold)),
+                ],
+              ),
+            ),
+            const SizedBox(height: 12),
+            if (tab == 0) machineTab(),
+            if (tab == 1) salesTab(),
+            if (tab == 2) walletsTab(),
+          ],
+        ),
+      ),
+      bottomNavigationBar: BottomNavigationBar(
+        currentIndex: tab,
+        backgroundColor: Colors.white,
+        selectedItemColor: petrol,
+        unselectedItemColor: Colors.grey,
+        type: BottomNavigationBarType.fixed,
+        onTap: (i) {
+          setState(() {
+            tab = i;
+          });
+        },
+        items: const [
+          BottomNavigationBarItem(icon: Icon(Icons.atm), label: 'المكن'),
+          BottomNavigationBarItem(icon: Icon(Icons.shopping_cart), label: 'مبيعات'),
+          BottomNavigationBarItem(icon: Icon(Icons.credit_card), label: 'المحافظ'),
+        ],
+      ),
+      floatingActionButton: FloatingActionButton(
+        backgroundColor: petrol,
+        onPressed: charge,
+        child: const Icon(Icons.add, color: Colors.white, size: 30),
+      ),
     );
   }
-  Widget _drawerItem(String t, VoidCallback onTap) => Padding(padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4), child: ListTile(tileColor: const Color(0xFFDFF5F2), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)), title: Text(t, textAlign: TextAlign.center, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 17, color: petrol)), onTap: onTap));
-  Widget _topCard(String title, String val, {bool gold=false, bool red=false}) => Container(padding: const EdgeInsets.all(16), decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16), border: Border(right: BorderSide(color: red ? Colors.red : gold ? Colors.amber : petrol, width: 5))), child: Column(crossAxisAlignment: CrossAxisAlignment.end, children: [Text(title, style: const TextStyle(color: Colors.grey)), const SizedBox(height: 8), Text(val, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold))]));
-  Widget _machineTab() => Container(width: double.infinity, padding: const EdgeInsets.all(16), decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16)), child: Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
-    const Text('المكن', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-    const Text('اختر المكنة — التغذية تزيد المكنة المختارة فقط', style: TextStyle(color: Colors.grey)),
-    const SizedBox(height: 12),
-    Wrap(spacing: 8, runSpacing: 8, children: _wallets.where((w)=>!w['name'].toString().contains('الخزنة') && !w['name'].toString().contains('الدرج')).map((w) { final sel = _selectedMachine==w['name']; return GestureDetector(onTap: ()=>setState(()=>_selectedMachine=w['name']), child: Container(width: 100, padding: const EdgeInsets.all(10), decoration: BoxDecoration(color: sel?petrol:const Color(0xFFEFF8F7), borderRadius: BorderRadius.circular(12), border: Border.all(color: Colors.red)), child: Column(children: [Text(w['name'], textAlign: TextAlign.center, style: TextStyle(color: sel?Colors.white:Colors.black, fontWeight: FontWeight.bold)), Text('${w['bal']}', style: TextStyle(color: sel?Colors.white:Colors.black))]))); }).toList()),
-    const SizedBox(height: 12),
-    Text('المكنة المختارة: $_selectedMachine — الرصيد: ${_wallets.firstWhere((e)=>e['name']==_selectedMachine, orElse: ()=>{'bal':0})['bal']}'),
-    const SizedBox(height: 12),
-    Row(children: [Expanded(child: SizedBox(height: 50, child: ElevatedButton(style: ElevatedButton.styleFrom(backgroundColor: petrol), onPressed: _charge, child: const Text('شحن', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18))))), const SizedBox(width: 8), Expanded(child: SizedBox(height: 50, child: ElevatedButton(style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFDFF5F2)), onPressed: (){}, child: const Text('كروت', style: TextStyle(color: petrol, fontWeight: FontWeight.bold, fontSize: 18)))))]),
-  ]));
-  Widget _salesTab() => Container(width: double.infinity, padding: const EdgeInsets.all(16), decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16)), child: Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
-    const Text('المبيعات', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-    const Text('إضافة منتج للفاتورة', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 17)),
-    const SizedBox(height: 10),
-    TextField(controller: _nameCtrl, textAlign: TextAlign.right, decoration: InputDecoration(hintText: 'اسم المنتج / الموديل', border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)))),
-    const SizedBox(height: 10),
-    Row(children: [Expanded(child: TextField(controller: _qtyCtrl, keyboardType: TextInputType.number, textAlign: TextAlign.right, decoration: InputDecoration(hintText: 'الكمية', border: OutlineInputBorder(borderRadius: BorderRadius.circular(12))))), const SizedBox(width: 8), Expanded(child: TextField(controller: _buyCtrl, keyboardType: TextInputType.number, textAlign: TextAlign.right, decoration: InputDecoration(hintText: 'سعر الشراء', border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)))))]),
-    const SizedBox(height: 10),
-    TextField(controller: _sellCtrl, keyboardType: TextInputType.number, textAlign: TextAlign.right, decoration: InputDecoration(hintText: 'سعر البيع', border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)))),
-    const SizedBox(height: 10),
-    SizedBox(width: double.infinity, height: 50, child: ElevatedButton(style: ElevatedButton.styleFrom(backgroundColor: petrol), onPressed: _addProduct, child: const Text('إضافة منتج', style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)))),
-    const SizedBox(height: 12),
-    const Text('فواتير اليوم:', style: TextStyle(fontWeight: FontWeight.bold)),
-    ..._sales.take(10).map((s)=>ListTile(title: Text(s['name']??'', textAlign: TextAlign.right), trailing: Text('${s['total']} ج', style: const TextStyle(fontWeight: FontWeight.bold)))),
-  ]));
-  Widget _walletsTab() => Container(width: double.infinity, padding: const EdgeInsets.all(16), decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16)), child: Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
-    const Text('المحافظ والخزنة', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-    const SizedBox(height: 10),
-    ..._wallets.map((w)=>Container(margin: const EdgeInsets.only(bottom: 8), padding: const EdgeInsets.all(12), decoration: BoxDecoration(border: Border.all(color: Colors.grey.shade300), borderRadius: BorderRadius.circular(12)), child: Column(crossAxisAlignment: CrossAxisAlignment.end, children: [Text(w['name'], style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 17)), Text('الرصيد: ${w['bal']}'), Text('الليميت: ${w['limit']} — المتبقي: ${(w['limit'] as num).toDouble() - (w['bal'] as num).toDouble()}')] ))),
-  ]));
-  Widget _reportsTab() => Container(width: double.infinity, padding: const EdgeInsets.all(16), decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16)), child: Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
-    const Text('التقارير', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-    const SizedBox(height: 10),
-    Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [Text('مبيعات اليوم: $_todaySales'), Text('صافي الربح: $_todayProfit')]),
-    Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [Text('عدد العمليات: ${_sales.length}'), Text('نقدية الدرج: $_cashDrawer')]),
-    const SizedBox(height: 10),
-    const Text('مبيعات آخر 7 أيام', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 17)),
-  ]));
+
+  Widget topCard(String title, String val) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16)),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.end,
+        children: [
+          Text(title, style: const TextStyle(color: Colors.grey)),
+          const SizedBox(height: 8),
+          Text(val, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+        ],
+      ),
+    );
+  }
+
+  Widget machineTab() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16)),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.end,
+        children: [
+          const Text('المكن', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+          const SizedBox(height: 12),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: wallets.map((w) {
+              final sel = selectedMachine == w['name'];
+              return GestureDetector(
+                onTap: () {
+                  setState(() {
+                    selectedMachine = w['name'];
+                  });
+                },
+                child: Container(
+                  width: 100,
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: sel ? petrol : const Color(0xFFEFF8F7),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Column(
+                    children: [
+                      Text(w['name'], textAlign: TextAlign.center, style: TextStyle(color: sel ? Colors.white : Colors.black, fontWeight: FontWeight.bold)),
+                      Text('${w['bal']}', style: TextStyle(color: sel ? Colors.white : Colors.black)),
+                    ],
+                  ),
+                ),
+              );
+            }).toList(),
+          ),
+          const SizedBox(height: 12),
+          SizedBox(
+            width: double.infinity,
+            height: 50,
+            child: ElevatedButton(
+              style: ElevatedButton.styleFrom(backgroundColor: petrol),
+              onPressed: charge,
+              child: const Text('شحن', style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget salesTab() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16)),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.end,
+        children: [
+          const Text('المبيعات - إضافة منتج', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+          const SizedBox(height: 10),
+          TextField(controller: nameCtrl, textAlign: TextAlign.right, decoration: InputDecoration(hintText: 'اسم المنتج / الموديل', border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)))),
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              Expanded(child: TextField(controller: qtyCtrl, keyboardType: TextInputType.number, textAlign: TextAlign.right, decoration: InputDecoration(hintText: 'الكمية', border: OutlineInputBorder(borderRadius: BorderRadius.circular(12))))),
+              const SizedBox(width: 8),
+              Expanded(child: TextField(controller: buyCtrl, keyboardType: TextInputType.number, textAlign: TextAlign.right, decoration: InputDecoration(hintText: 'سعر الشراء', border: OutlineInputBorder(borderRadius: BorderRadius.circular(12))))),
+            ],
+          ),
+          const SizedBox(height: 10),
+          TextField(controller: sellCtrl, keyboardType: TextInputType.number, textAlign: TextAlign.right, decoration: InputDecoration(hintText: 'سعر البيع', border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)))),
+          const SizedBox(height: 10),
+          SizedBox(
+            width: double.infinity,
+            height: 50,
+            child: ElevatedButton(
+              style: ElevatedButton.styleFrom(backgroundColor: petrol),
+              onPressed: addProduct,
+              child: const Text('إضافة منتج', style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
+            ),
+          ),
+          const SizedBox(height: 12),
+          ...sales.take(10).map((s) => ListTile(
+                title: Text(s['name'] ?? '', textAlign: TextAlign.right),
+                trailing: Text('${s['total']} ج', style: const TextStyle(fontWeight: FontWeight.bold)),
+              )),
+        ],
+      ),
+    );
+  }
+
+  Widget walletsTab() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16)),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.end,
+        children: [
+          const Text('المحافظ والخزنة', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+          const SizedBox(height: 10),
+          ...wallets.map((w) => Container(
+                margin: const EdgeInsets.only(bottom: 8),
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(border: Border.all(color: Colors.grey.shade300), borderRadius: BorderRadius.circular(12)),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Text(w['name'], style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 17)),
+                    Text('الرصيد: ${w['bal']}'),
+                    Text('الليميت: ${w['limit']}'),
+                  ],
+                ),
+              )),
+        ],
+      ),
+    );
+  }
 }
 
-class FazlakaApp extends StatefulWidget { const FazlakaApp({super.key}); @override State<FazlakaApp> createState() => _FazlakaAppState(); }
-class _FazlakaAppState extends State<FazlakaApp> { bool ar = true; bool logged = false; String host = '10.10.10.1', user = '', pass = ''; @override Widget build(BuildContext context) { return MaterialApp(debugShowCheckedModeBanner: false, home: !logged ? LoginScreen(ar: ar, onLang: () => setState(() => ar = !ar), onLogin: (h,u,p) { setState(() { host=h; user=u; pass=p; logged=true; }); }) : HomeScreen(ar: ar, host: host, user: user, pass: pass, onLang: () => setState(() => ar = !ar), onLogout: () => setState(() => logged=false))); } }
+class FazlakaApp extends StatefulWidget {
+  const FazlakaApp({super.key});
+  @override
+  State<FazlakaApp> createState() => _FazlakaAppState();
+}
 
-class LoginScreen extends StatefulWidget { final bool ar; final VoidCallback onLang; final void Function(String,String,String) onLogin; const LoginScreen({super.key, required this.ar, required this.onLang, required this.onLogin}); @override State<LoginScreen> createState() => _LoginScreenState(); }
+class _FazlakaAppState extends State<FazlakaApp> {
+  bool logged = false;
+  String host = '10.10.10.1';
+  String user = '';
+  String pass = '';
+
+  @override
+  Widget build(BuildContext context) {
+    if (!logged) {
+      return LoginScreen(
+        onLogin: (h, u, p) {
+          setState(() {
+            host = h;
+            user = u;
+            pass = p;
+            logged = true;
+          });
+        },
+      );
+    }
+    return HomeScreen(
+      host: host,
+      user: user,
+      pass: pass,
+      onLogout: () {
+        setState(() {
+          logged = false;
+        });
+      },
+    );
+  }
+}
+
+class LoginScreen extends StatefulWidget {
+  final void Function(String, String, String) onLogin;
+  const LoginScreen({super.key, required this.onLogin});
+  @override
+  State<LoginScreen> createState() => _LoginScreenState();
+}
+
 class _LoginScreenState extends State<LoginScreen> {
-  final _host = TextEditingController(text: '10.10.10.1'); final _user = TextEditingController(); final _pass = TextEditingController(); bool _remember = true, _busy = false; String _msg = '';
-  @override void initState() { super.initState(); _load(); }
-  Future<void> _load() async { final sp = await SharedPreferences.getInstance(); if (sp.getBool('remember_me') == true) { _user.text = sp.getString('router_user') ?? ''; _pass.text = sp.getString('router_pass') ?? ''; _host.text = sp.getString('router_host') ?? '10.10.10.1'; } setState(() {}); }
-  Future<void> _doLogin() async { final h = _host.text.trim(); final u = _user.text.trim(); final p = _pass.text; setState(() { _busy = true; _msg = ''; }); try { await MikroTikApi().run(h, u, p, '/system/resource/print'); final sp = await SharedPreferences.getInstance(); await sp.setBool('remember_me', _remember); if (_remember) { await sp.setString('router_user', u); await sp.setString('router_pass', p); await sp.setString('router_host', h); } else { await sp.remove('router_user'); await sp.remove('router_pass'); await sp.remove('router_host'); } widget.onLogin(h, u, p); } catch (_) { setState(() => _msg = widget.ar ? 'يوزر أو باسورد غلط' : 'Wrong user or password'); } setState(() => _busy = false); }
-  @override Widget build(BuildContext context) { return Scaffold(backgroundColor: bgColor, appBar: AppBar(backgroundColor: petrol, title: const Text('FAZLAKA', style: TextStyle(color: Colors.white, letterSpacing: 4)), centerTitle: true, actions: [TextButton(onPressed: widget.onLang, child: Text(widget.ar ? 'EN' : 'عربي', style: const TextStyle(color: Colors.white)))]), body: SingleChildScrollView(padding: const EdgeInsets.all(20), child: Column(children: [ const SizedBox(height: 20), const Text('FAZLAKA', style: TextStyle(fontSize: 36, fontWeight: FontWeight.bold, color: petrol, letterSpacing: 4)), const SizedBox(height: 24), TextField(controller: _host, decoration: InputDecoration(labelText: 'Server IP', filled: true, fillColor: Colors.white, border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)))), const SizedBox(height: 12), TextField(controller: _user, decoration: InputDecoration(labelText: widget.ar ? 'اسم المستخدم' : 'Username', filled: true, fillColor: Colors.white, border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)))), const SizedBox(height: 12), TextField(controller: _pass, obscureText: true, decoration: InputDecoration(labelText: widget.ar ? 'كلمة السر' : 'Password', filled: true, fillColor: Colors.white, border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)))), const SizedBox(height: 8), Row(children: [Checkbox(value: _remember, activeColor: petrol, onChanged: (v) => setState(() => _remember = v ?? false)), Text(widget.ar ? 'تذكرني' : 'Remember Me')]), const SizedBox(height: 12), SizedBox(width: double.infinity, height: 52, child: ElevatedButton(style: ElevatedButton.styleFrom(backgroundColor: petrol, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16))), onPressed: _busy ? null : _doLogin, child: Text(_busy ? '...' : (widget.ar ? 'دخول / CONNECT' : 'Login / CONNECT'), style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)))), if (_msg.isNotEmpty) Padding(padding: const EdgeInsets.only(top: 12), child: Text(_msg, style: const TextStyle(color: Colors.red, fontWeight: FontWeight.bold))), ]))); }
+  final hostCtrl = TextEditingController(text: '10.10.10.1');
+  final userCtrl = TextEditingController();
+  final passCtrl = TextEditingController();
+  bool busy = false;
+  String msg = '';
+
+  Future<void> doLogin() async {
+    final h = hostCtrl.text.trim();
+    final u = userCtrl.text.trim();
+    final p = passCtrl.text;
+    setState(() {
+      busy = true;
+      msg = '';
+    });
+    try {
+      await MikroTikApi().run(h, u, p, '/system/resource/print');
+      widget.onLogin(h, u, p);
+    } catch (_) {
+      setState(() {
+        msg = 'يوزر أو باسورد غلط';
+      });
+    }
+    setState(() {
+      busy = false;
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: bgColor,
+      appBar: AppBar(
+        backgroundColor: petrol,
+        title: const Text('FAZLAKA', style: TextStyle(color: Colors.white, letterSpacing: 4)),
+        centerTitle: true,
+      ),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          children: [
+            const SizedBox(height: 20),
+            const Text('FAZLAKA', style: TextStyle(fontSize: 36, fontWeight: FontWeight.bold, color: petrol, letterSpacing: 4)),
+            const SizedBox(height: 24),
+            TextField(controller: hostCtrl, decoration: InputDecoration(labelText: 'Server IP', filled: true, fillColor: Colors.white, border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)))),
+            const SizedBox(height: 12),
+            TextField(controller: userCtrl, decoration: InputDecoration(labelText: 'اسم المستخدم', filled: true, fillColor: Colors.white, border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)))),
+            const SizedBox(height: 12),
+            TextField(controller: passCtrl, obscureText: true, decoration: InputDecoration(labelText: 'كلمة السر', filled: true, fillColor: Colors.white, border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)))),
+            const SizedBox(height: 12),
+            SizedBox(
+              width: double.infinity,
+              height: 52,
+              child: ElevatedButton(
+                style: ElevatedButton.styleFrom(backgroundColor: petrol, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16))),
+                onPressed: busy ? null : doLogin,
+                child: Text(busy ? '...' : 'دخول / CONNECT', style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
+              ),
+            ),
+            if (msg.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.only(top: 12),
+                child: Text(msg, style: const TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
 }
 
-class HomeScreen extends StatefulWidget { final bool ar; final String host, user, pass; final VoidCallback onLang, onLogout; const HomeScreen({super.key, required this.ar, required this.host, required this.user, required this.pass, required this.onLang, required this.onLogout}); @override State<HomeScreen> createState() => _HomeScreenState(); }
-class _HomeScreenState extends State<HomeScreen> { int _tab = 0; @override Widget build(BuildContext context) { return Scaffold(backgroundColor: bgColor, appBar: AppBar(backgroundColor: petrol, title: const Text('FAZLAKA', style: TextStyle(color: Colors.white, letterSpacing: 4)), centerTitle: true, actions: [TextButton(onPressed: widget.onLang, child: Text(widget.ar ? 'EN' : 'عربي', style: const TextStyle(color: Colors.white))), IconButton(onPressed: widget.onLogout, icon: const Icon(Icons.logout, color: Colors.white))]), body: _tab == 0 ? HomeTab(ar: widget.ar, host: widget.host, user: widget.user, pass: widget.pass) : _tab == 1 ? CardsTab(ar: widget.ar, host: widget.host, user: widget.user, pass: widget.pass) : _tab == 2 ? PppoeTab(ar: widget.ar, host: widget.host, user: widget.user, pass: widget.pass) : _tab == 3 ? SalesTab(ar: widget.ar) : AccountTab(ar: widget.ar), bottomNavigationBar: BottomNavigationBar(currentIndex: _tab, backgroundColor: petrol, selectedItemColor: Colors.white, unselectedItemColor: Colors.white70, type: BottomNavigationBarType.fixed, onTap: (i) => setState(() => _tab = i), items: [ BottomNavigationBarItem(icon: const Icon(Icons.home), label: widget.ar ? 'الرئيسية' : 'Home'), BottomNavigationBarItem(icon: const Icon(Icons.card_membership), label: widget.ar ? 'الكروت' : 'Cards'), BottomNavigationBarItem(icon: const Icon(Icons.cable), label: widget.ar ? 'PPPoE' : 'PPPoE'), BottomNavigationBarItem(icon: const Icon(Icons.bar_chart), label: widget.ar ? 'المبيعات' : 'Sales'), BottomNavigationBarItem(icon: const Icon(Icons.person), label: widget.ar ? 'الحساب' : 'Account'), ]), ); } }
-
-class PppoeTab extends StatefulWidget { final bool ar; final String host, user, pass; const PppoeTab({super.key, required this.ar, required this.host, required this.user, required this.pass}); @override State<PppoeTab> createState() => _PppoeTabState(); }
-class _PppoeTabState extends State<PppoeTab> {
-  List<Map<String,String>> _subs = []; bool _loading = false; String _msg = ''; String _search = '';
-  final _nameCtrl = TextEditingController(); final _broadbandCtrl = TextEditingController(); final _pppoeUserCtrl = TextEditingController(); final _pppoePassCtrl = TextEditingController(); final _devicePassCtrl = TextEditingController(); final _deviceUserCtrl = TextEditingController(); final _searchCtrl = TextEditingController();
-  String _profile = 'subscribers'; List<String> _profiles = ['subscribers'];
-  @override void initState() { super.initState(); _load(); }
-  @override void dispose() { _nameCtrl.dispose(); _broadbandCtrl.dispose(); _pppoeUserCtrl.dispose(); _pppoePassCtrl.dispose(); _devicePassCtrl.dispose(); _deviceUserCtrl.dispose(); _searchCtrl.dispose(); super.dispose(); }
-  Future<void> _load() async { setState(() => _loading = true); try { final secrets = await MikroTikApi().run(widget.host, widget.user, widget.pass, '/ppp/secret/print'); final profs = await MikroTikApi().run(widget.host, widget.user, widget.pass, '/ppp/profile/print'); final names = profs.map((e) => e['name'] ?? '').where((e) => e.isNotEmpty).toList(); setState(() { _subs = secrets; if (names.isNotEmpty) { _profiles = names; if (!_profiles.contains(_profile)) _profile = _profiles.first; } }); } catch (_) { setState(() => _msg = widget.ar ? 'مش متصل بالراوتر' : 'Not connected'); } setState(() => _loading = false); }
-  String _makeComment() { return 'BB:${_broadbandCtrl.text.trim()}|DEVUSER:${_deviceUserCtrl.text.trim()}|DEVPASS:${_devicePassCtrl.text.trim()}'; }
-  String _getFromComment(String comment, String key) { try { for (final part in comment.split('|')) { if (part.startsWith('$key:')) return part.substring(key.length + 1); } } catch (_) {} return ''; }
-  Future<void> _add() async { final name = _nameCtrl.text.trim(); final pppoeUser = _pppoeUserCtrl.text.trim(); final pppoePass = _pppoePassCtrl.text.trim(); if (name.isEmpty || pppoeUser.isEmpty || pppoePass.isEmpty) { setState(() => _msg = widget.ar ? 'اكتب اسم العميل ويوزر وباسورد الـ PPPoE' : 'Enter name and PPPoE'); return; } setState(() => _msg = widget.ar ? 'جارٍ الاضافة...' : 'Adding...'); try { final res = await MikroTikApi().run(widget.host, widget.user, widget.pass, '/ppp/secret/add', ['=name=$pppoeUser', '=password=$pppoePass', '=service=pppoe', '=profile=$_profile', '=comment=${_makeComment()}|NAME:$name']); if (res.any((m) => m['__type__'] == '!trap')) { setState(() => _msg = widget.ar ? 'اليوزر ده موجود قبل كده' : 'User exists'); return; } setState(() => _msg = widget.ar ? 'تم اضافة $name بنجاح' : 'Added $name'); _nameCtrl.clear(); _broadbandCtrl.clear(); _pppoeUserCtrl.clear(); _pppoePassCtrl.clear(); _devicePassCtrl.clear(); _deviceUserCtrl.clear(); _load(); } catch (_) { setState(() => _msg = widget.ar ? 'تعذر الاضافة' : 'Cannot add'); } }
-  Future<void> _edit(Map<String,String> m) async { final id = m['.id'] ?? ''; final oldComment = m['comment'] ?? ''; final bbCtrl = TextEditingController(text: _getFromComment(oldComment, 'BB')); final devUserCtrl = TextEditingController(text: _getFromComment(oldComment, 'DEVUSER')); final devPassCtrl = TextEditingController(text: _getFromComment(oldComment, 'DEVPASS')); final nameCtrl = TextEditingController(text: _getFromComment(oldComment, 'NAME')); final userCtrl = TextEditingController(text: m['name'] ?? ''); final passCtrl = TextEditingController(text: m['password'] ?? ''); String prof = m['profile'] ?? _profile; if (!_profiles.contains(prof)) prof = _profiles.first; final ok = await showDialog<bool>(context: context, builder: (_) => StatefulBuilder(builder: (ctx, setD) => AlertDialog(title: Text(widget.ar ? 'تعديل بيانات العميل' : 'Edit Client'), content: SingleChildScrollView(child: Column(mainAxisSize: MainAxisSize.min, children: [ TextField(controller: nameCtrl, decoration: InputDecoration(labelText: widget.ar ? 'اسم العميل' : 'Client Name')), const SizedBox(height: 8), TextField(controller: bbCtrl, keyboardType: TextInputType.number, decoration: InputDecoration(labelText: widget.ar ? 'رقم البرودباند الخاص بالعميل' : 'Broadband Number')), const SizedBox(height: 8), TextField(controller: userCtrl, decoration: InputDecoration(labelText: widget.ar ? 'يوزر الـ PPPoE' : 'PPPoE User')), const SizedBox(height: 8), TextField(controller: passCtrl, decoration: InputDecoration(labelText: widget.ar ? 'باسورد الـ PPPoE' : 'PPPoE Password')), const SizedBox(height: 8), TextField(controller: devUserCtrl, decoration: InputDecoration(labelText: widget.ar ? 'يوزر الجهاز' : 'Device User')), const SizedBox(height: 8), TextField(controller: devPassCtrl, decoration: InputDecoration(labelText: widget.ar ? 'باسورد الجهاز' : 'Device Password')), const SizedBox(height: 8), Row(children: [Text(widget.ar ? 'البروفايل: ' : 'Profile: '), Expanded(child: DropdownButton<String>(value: prof, isExpanded: true, items: _profiles.map((p) => DropdownMenuItem(value: p, child: Text(p))).toList(), onChanged: (v) => setD(() => prof = v ?? prof)))]), ])), actions: [TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text(widget.ar ? 'الغاء' : 'Cancel')), TextButton(onPressed: () => Navigator.pop(ctx, true), child: Text(widget.ar ? 'حفظ التعديل' : 'Save'))], ))); if (ok != true) return; final newComment = 'BB:${bbCtrl.text.trim()}|DEVUSER:${devUserCtrl.text.trim()}|DEVPASS:${devPassCtrl.text.trim()}|NAME:${nameCtrl.text.trim()}'; try { final setArgs = <String>['=numbers=$id', '=name=${userCtrl.text.trim()}', '=profile=$prof', '=comment=$newComment']; if (passCtrl.text.trim().isNotEmpty) { setArgs.add('=password=${passCtrl.text.trim()}'); } await MikroTikApi().run(widget.host, widget.user, widget.pass, '/ppp/secret/set', setArgs); setState(() => _msg = widget.ar ? 'تم تعديل بيانات ${nameCtrl.text}' : 'Updated'); _load(); } catch (_) { setState(() => _msg = widget.ar ? 'تعذر التعديل' : 'Cannot update'); } }
-  Future<void> _toggle(String id, bool disabled) async { try { await MikroTikApi().run(widget.host, widget.user, widget.pass, '/ppp/secret/set', ['=numbers=$id', '=disabled=${disabled ? 'no' : 'yes'}']); _load(); } catch (_) {} }
-  Future<void> _delete(String id, String name) async { final ok = await showDialog<bool>(context: context, builder: (_) => AlertDialog(title: Text(widget.ar ? 'حذف $name ؟' : 'Delete $name ?'), content: Text(widget.ar ? 'متأكد؟' : 'Are you sure?'), actions: [TextButton(onPressed: () => Navigator.pop(context, false), child: Text(widget.ar ? 'لا' : 'No')), TextButton(onPressed: () => Navigator.pop(context, true), child: Text(widget.ar ? 'نعم احذف' : 'Yes', style: const TextStyle(color: Colors.red)))])); if (ok != true) return; try { await MikroTikApi().run(widget.host, widget.user, widget.pass, '/ppp/secret/remove', ['=numbers=$id']); setState(() => _msg = widget.ar ? 'تم حذف $name' : 'Deleted'); _load(); } catch (_) {} }
-  @override Widget build(BuildContext context) { final filtered = _search.trim().isEmpty ? _subs : _subs.where((m) => (m['name'] ?? '').toLowerCase().contains(_search.trim().toLowerCase()) || (m['comment'] ?? '').toLowerCase().contains(_search.trim().toLowerCase())).toList(); return SingleChildScrollView(padding: const EdgeInsets.all(16), child: Column(children: [ Container(padding: const EdgeInsets.all(16), decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(20)), child: Column(children: [ Align(alignment: Alignment.centerRight, child: Text(widget.ar ? 'اضافة عميل برودباند PPPoE' : 'Add Broadband Client', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: petrol))), const SizedBox(height: 12), TextField(controller: _nameCtrl, decoration: InputDecoration(labelText: widget.ar ? 'اسم العميل' : 'Client Name', filled: true, fillColor: const Color(0xFFF5F5F5), border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide.none))), const SizedBox(height: 10), TextField(controller: _broadbandCtrl, keyboardType: TextInputType.number, decoration: InputDecoration(labelText: widget.ar ? 'رقم البرودباند الخاص بالعميل' : 'Broadband Number', filled: true, fillColor: const Color(0xFFF5F5F5), border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide.none))), const SizedBox(height: 10), TextField(controller: _pppoeUserCtrl, decoration: InputDecoration(labelText: widget.ar ? 'يوزر الـ PPPoE' : 'PPPoE User', filled: true, fillColor: const Color(0xFFF5F5F5), border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide.none))), const SizedBox(height: 10), TextField(controller: _pppoePassCtrl, decoration: InputDecoration(labelText: widget.ar ? 'باسورد الـ PPPoE' : 'PPPoE Password', filled: true, fillColor: const Color(0xFFF5F5F5), border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide.none))), const SizedBox(height: 10), TextField(controller: _deviceUserCtrl, decoration: InputDecoration(labelText: widget.ar ? 'يوزر الجهاز' : 'Device User', filled: true, fillColor: const Color(0xFFF5F5F5), border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide.none))), const SizedBox(height: 10), TextField(controller: _devicePassCtrl, decoration: InputDecoration(labelText: widget.ar ? 'باسورد الجهاز' : 'Device Password', filled: true, fillColor: const Color(0xFFF5F5F5), border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide.none))), const SizedBox(height: 10), Row(children: [Text(widget.ar ? 'البروفايل: ' : 'Profile: ', style: const TextStyle(fontWeight: FontWeight.bold)), Expanded(child: DropdownButton<String>(value: _profile, isExpanded: true, items: _profiles.map((p) => DropdownMenuItem(value: p, child: Text(p))).toList(), onChanged: (v) => setState(() => _profile = v ?? 'subscribers')))]), const SizedBox(height: 12), SizedBox(width: double.infinity, height: 50, child: ElevatedButton(style: ElevatedButton.styleFrom(backgroundColor: petrol, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14))), onPressed: _add, child: Text(widget.ar ? 'اضافة عميل' : 'Add Client', style: const TextStyle(color: Colors.white, fontSize: 17, fontWeight: FontWeight.bold)))), if (_msg.isNotEmpty) Padding(padding: const EdgeInsets.only(top: 10), child: Text(_msg, style: const TextStyle(fontWeight: FontWeight.bold), textAlign: TextAlign.center)), ])), const SizedBox(height: 16), TextField(controller: _searchCtrl, onChanged: (v) => setState(() => _search = v), decoration: InputDecoration(hintText: widget.ar ? 'بحث برقم البرودباند او اسم العميل' : 'Search', prefixIcon: const Icon(Icons.search, color: petrol), filled: true, fillColor: Colors.white, border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide.none))), const SizedBox(height: 10), Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [Text(widget.ar ? 'العملاء: ${_subs.length}' : 'Clients: ${_subs.length}', style: const TextStyle(fontWeight: FontWeight.bold)), IconButton(onPressed: _load, icon: const Icon(Icons.refresh, color: petrol))]), if (_loading) const Padding(padding: EdgeInsets.all(20), child: CircularProgressIndicator()), if (!_loading) ...filtered.map((m) { final name = _getFromComment(m['comment'] ?? '', 'NAME').isNotEmpty ? _getFromComment(m['comment'] ?? '', 'NAME') : (m['name'] ?? ''); final bb = _getFromComment(m['comment'] ?? '', 'BB'); final isDis = (m['disabled'] ?? 'false') == 'true'; return Card(child: ListTile(leading: CircleAvatar(backgroundColor: isDis ? Colors.red : Colors.green, child: Icon(isDis ? Icons.block : Icons.person, color: Colors.white)), title: Text(name, style: const TextStyle(fontWeight: FontWeight.bold)), subtitle: Text('BB: ${bb.isEmpty ? '-' : bb} | ${m['name'] ?? ''} | ${m['profile'] ?? ''} - ${isDis ? (widget.ar ? 'موقوف' : 'Disabled') : (widget.ar ? 'شغال' : 'Active')}'), trailing: Row(mainAxisSize: MainAxisSize.min, children: [ IconButton(icon: const Icon(Icons.edit, color: petrol), onPressed: () => _edit(m)), IconButton(icon: Icon(isDis ? Icons.check_circle : Icons.pause_circle, color: isDis ? Colors.green : Colors.orange), onPressed: () => _toggle(m['.id'] ?? '', isDis)), IconButton(icon: const Icon(Icons.delete, color: Colors.red), onPressed: () => _delete(m['.id'] ?? '', name)), ]), )); }), ])); }
+class HomeScreen extends StatefulWidget {
+  final String host;
+  final String user;
+  final String pass;
+  final VoidCallback onLogout;
+  const HomeScreen({super.key, required this.host, required this.user, required this.pass, required this.onLogout});
+  @override
+  State<HomeScreen> createState() => _HomeScreenState();
 }
 
-class HomeTab extends StatefulWidget { final bool ar; final String host, user, pass; const HomeTab({super.key, required this.ar, required this.host, required this.user, required this.pass}); @override State<HomeTab> createState() => _HomeTabState(); }
+class _HomeScreenState extends State<HomeScreen> {
+  int tab = 0;
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: bgColor,
+      appBar: AppBar(
+        backgroundColor: petrol,
+        title: const Text('FAZLAKA', style: TextStyle(color: Colors.white, letterSpacing: 4)),
+        centerTitle: true,
+        actions: [
+          IconButton(onPressed: widget.onLogout, icon: const Icon(Icons.logout, color: Colors.white)),
+        ],
+      ),
+      body: tab == 0
+          ? HomeTab(host: widget.host, user: widget.user, pass: widget.pass)
+          : CardsTab(host: widget.host, user: widget.user, pass: widget.pass),
+      bottomNavigationBar: BottomNavigationBar(
+        currentIndex: tab,
+        backgroundColor: petrol,
+        selectedItemColor: Colors.white,
+        unselectedItemColor: Colors.white70,
+        type: BottomNavigationBarType.fixed,
+        onTap: (i) {
+          setState(() {
+            tab = i;
+          });
+        },
+        items: const [
+          BottomNavigationBarItem(icon: Icon(Icons.home), label: 'الرئيسية'),
+          BottomNavigationBarItem(icon: Icon(Icons.card_membership), label: 'الكروت'),
+        ],
+      ),
+    );
+  }
+}
+
+class HomeTab extends StatefulWidget {
+  final String host;
+  final String user;
+  final String pass;
+  const HomeTab({super.key, required this.host, required this.user, required this.pass});
+  @override
+  State<HomeTab> createState() => _HomeTabState();
+}
+
 class _HomeTabState extends State<HomeTab> {
-  String _profile = '20'; int _count = 1; List<String> _created = []; String _printer = 'غير متصلة'; BluetoothConnection? _bt; String _msg = ''; bool _busy = false; bool _autoTried = false;
-  @override void initState() { super.initState(); Future.delayed(const Duration(milliseconds: 500), _autoConnectPrinter); }
-  Future<void> _autoConnectPrinter() async { if (_autoTried) return; _autoTried = true; try { await Permission.bluetoothConnect.request(); await Permission.bluetoothScan.request(); await Permission.locationWhenInUse.request(); final sp = await SharedPreferences.getInstance(); final savedMac = sp.getString('saved_printer_mac') ?? ''; final savedName = sp.getString('saved_printer_name') ?? ''; final enabled = await FlutterBluetoothSerial.instance.isEnabled ?? false; if (!enabled) return; final bonded = await FlutterBluetoothSerial.instance.getBondedDevices(); BluetoothDevice? target; for (final d in bonded) { final n = (d.name ?? '').toLowerCase(); if (savedMac.isNotEmpty && d.address == savedMac) { target = d; break; } if (n.contains('razytech') || n.contains('5890') || (savedName.isNotEmpty && n == savedName.toLowerCase())) { target = d; break; } } if (target == null) return; if (_bt != null && _bt!.isConnected) return; for (int i = 0; i < 2; i++) { try { try { _bt?.close(); } catch (_) {} _bt = await BluetoothConnection.toAddress(target.address); if (_bt?.isConnected ?? false) break; } catch (_) { await Future.delayed(const Duration(milliseconds: 800)); } } if (_bt?.isConnected ?? false) { await sp.setString('saved_printer_mac', target.address); await sp.setString('saved_printer_name', target.name ?? 'Printer'); if (!mounted) return; setState(() => _printer = target!.name ?? 'Printer'); } } catch (_) {} }
-  Future<void> _pickPrinter() async { await Permission.bluetoothConnect.request(); await Permission.bluetoothScan.request(); await Permission.locationWhenInUse.request(); await Permission.bluetoothAdvertise.request(); try { final enabled = await FlutterBluetoothSerial.instance.isEnabled ?? false; if (!enabled) { if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(widget.ar ? 'شغل البلوتوث الأول' : 'Turn Bluetooth on'))); return; } final bonded = await FlutterBluetoothSerial.instance.getBondedDevices(); if (!mounted) return; if (bonded.isEmpty) { ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(widget.ar ? 'لا توجد طابعة مقترنة' : 'No paired printer'))); return; } showModalBottomSheet(context: context, builder: (_) => ListView(children: bonded.map((d) => ListTile(title: Text(d.name ?? 'Printer'), subtitle: Text(d.address), onTap: () async { Navigator.pop(context); bool ok = false; for (int i = 0; i < 2 && !ok; i++) { try { try { _bt?.close(); } catch (_) {} _bt = await BluetoothConnection.toAddress(d.address); ok = _bt?.isConnected ?? false; } catch (_) { ok = false; await Future.delayed(const Duration(milliseconds: 1000)); } } if (ok) { final sp = await SharedPreferences.getInstance(); await sp.setString('saved_printer_mac', d.address); await sp.setString('saved_printer_name', d.name ?? 'Printer'); } if (!mounted) return; setState(() => _printer = ok ? (d.name ?? 'Printer') : 'غير متصلة'); })).toList())); } catch (e) { if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('خطأ: $e'))); } }
-  Future<void> _create() async { setState(() { _busy = true; _msg = ''; _created = []; }); try { final rnd = Random(); final names = <String>[]; for (int i = 0; i < _count; i++) { names.add('${1000000 + rnd.nextInt(9000000)}'); } final todayStr = DateTime.now().toIso8601String().substring(0, 10); for (final name in names) { final res = await MikroTikApi().run(widget.host, widget.user, widget.pass, '/ip/hotspot/user/add', ['=name=$name', '=password=', '=profile=$_profile', '=server=all', '=comment=created:$todayStr']); if (res.any((m) => m['__type__'] == '!trap')) throw Exception('create failed'); final check = await MikroTikApi().run(widget.host, widget.user, widget.pass, '/ip/hotspot/user/print'); final found = check.where((m) => m['name'] == name).toList(); if (found.isEmpty) throw Exception('not found'); final id = found.first['.id'] ?? ''; if (id.isNotEmpty) { try { await MikroTikApi().run(widget.host, widget.user, widget.pass, '/ip/hotspot/user/set', ['=numbers=$id', '=limit-uptime=${daysForProfile(_profile)}d']); } catch (_) {} try { await MikroTikApi().run(widget.host, widget.user, widget.pass, '/ip/hotspot/user/set', ['=numbers=$id', '=limit-bytes-total=${bytesFor(_profile)}']); } catch (_) {} } } await saveMonthlySale(_profile, names.length); setState(() { _created = names; _msg = widget.ar ? 'تم إنشاء $_count كارت بنجاح' : 'Created $_count cards'; }); } catch (_) { setState(() => _msg = widget.ar ? 'تعذر إنشاء الكارت' : 'Cannot create card'); } setState(() => _busy = false); }
-  Future<void> _print() async { if (_created.isEmpty) { setState(() => _msg = widget.ar ? 'أنشئ كارت أولاً' : 'Create a card first'); return; } if (_bt == null || !(_bt?.isConnected ?? false)) { setState(() => _msg = widget.ar ? 'جارٍ الاتصال بالطابعة أوتوماتيك...' : 'Auto-connecting...'); _autoTried = false; await _autoConnectPrinter(); if (_bt == null || !(_bt?.isConnected ?? false)) { setState(() => _msg = widget.ar ? 'اختر الطابعة أولاً' : 'Choose printer first'); return; } } try { for (final num in _created) { final recorder = ui.PictureRecorder(); final canvas = ui.Canvas(recorder, ui.Rect.fromLTWH(0, 0, 384, 220)); canvas.drawRect(ui.Rect.fromLTWH(0, 0, 384, 220), ui.Paint()..color = const Color(0xFFFFFFFF)); void drawText(String text, double y, double size, bool bold) { final builder = ui.ParagraphBuilder(ui.ParagraphStyle(textAlign: ui.TextAlign.center, fontSize: size, fontWeight: bold ? ui.FontWeight.bold : ui.FontWeight.normal, textDirection: ui.TextDirection.ltr)); builder.pushStyle(ui.TextStyle(color: const Color(0xFF000000), fontSize: size, fontWeight: bold ? ui.FontWeight.bold : ui.FontWeight.normal)); builder.addText(text); builder.pop(); final p = builder.build()..layout(ui.ParagraphConstraints(width: 384)); canvas.drawParagraph(p, ui.Offset(0, y)); } drawText('FAZLAKA', 10, 42, true); drawText('01016620065 - 01141418040', 70, 22, false); drawText('------------------------------', 105, 22, false); drawText(num, 130, 58, true); drawText('Price: $_profile | Quota: ${quotaFor(_profile)}GB', 195, 22, false); final pic = recorder.endRecording(); final img = await pic.toImage(384, 220); final byteData = await img.toByteData(format: ui.ImageByteFormat.rawRgba); final rgba = byteData!.buffer.asUint8List(); final mono = <int>[]; for (int y = 0; y < 220; y++) { for (int x = 0; x < 384; x += 8) { int b = 0; for (int bit = 0; bit < 8; bit++) { final idx = (y * 384 + x + bit) * 4; final r = rgba[idx]; final g = rgba[idx + 1]; final bl = rgba[idx + 2]; final gray = (r + g + bl) ~/ 3; if (gray < 150) b |= (0x80 >> bit); } mono.add(b); } } final bytes = <int>[]; bytes.addAll([0x1B, 0x40]); bytes.addAll([0x1B, 0x61, 0x01]); bytes.addAll([0x1D, 0x76, 0x30, 0x00, 48, 0, 220, 0]); bytes.addAll(mono); bytes.addAll([0x0A, 0x0A, 0x0A]); bytes.addAll([0x1D, 0x56, 0x00]); _bt!.output.add(Uint8List.fromList(bytes)); await _bt!.output.allSent; await Future.delayed(const Duration(milliseconds: 800)); } setState(() => _msg = widget.ar ? 'تمت الطباعة' : 'Printed'); } catch (_) { setState(() => _msg = widget.ar ? 'تعذر الطباعة' : 'Cannot print'); } }
-  @override void dispose() { try { _bt?.close(); } catch (_) {} super.dispose(); }
-  @override Widget build(BuildContext context) {
+  String profile = '20';
+  int count = 1;
+  List<String> created = [];
+  String printerName = 'غير متصلة';
+  BluetoothConnection? bt;
+  String msg = '';
+  bool busy = false;
+  bool autoTried = false;
+
+  @override
+  void initState() {
+    super.initState();
+    Future.delayed(const Duration(milliseconds: 500), autoConnectPrinter);
+  }
+
+  Future<void> autoConnectPrinter() async {
+    if (autoTried) return;
+    autoTried = true;
+    try {
+      await Permission.bluetoothConnect.request();
+      await Permission.bluetoothScan.request();
+      await Permission.locationWhenInUse.request();
+      final sp = await SharedPreferences.getInstance();
+      final savedMac = sp.getString('saved_printer_mac') ?? '';
+      final enabled = await FlutterBluetoothSerial.instance.isEnabled ?? false;
+      if (!enabled) return;
+      final bonded = await FlutterBluetoothSerial.instance.getBondedDevices();
+      BluetoothDevice? target;
+      for (final d in bonded) {
+        final n = (d.name ?? '').toLowerCase();
+        if (savedMac.isNotEmpty && d.address == savedMac) {
+          target = d;
+          break;
+        }
+        if (n.contains('razytech') || n.contains('5890')) {
+          target = d;
+          break;
+        }
+      }
+      if (target == null) return;
+      if (bt != null && bt!.isConnected) return;
+      try {
+        bt = await BluetoothConnection.toAddress(target.address);
+      } catch (_) {}
+      if (bt?.isConnected ?? false) {
+        await sp.setString('saved_printer_mac', target.address);
+        await sp.setString('saved_printer_name', target.name ?? 'Printer');
+        if (!mounted) return;
+        setState(() {
+          printerName = target!.name ?? 'Printer';
+        });
+      }
+    } catch (_) {}
+  }
+
+  Future<void> pickPrinter() async {
+    await Permission.bluetoothConnect.request();
+    await Permission.bluetoothScan.request();
+    await Permission.locationWhenInUse.request();
+    try {
+      final bonded = await FlutterBluetoothSerial.instance.getBondedDevices();
+      if (!mounted) return;
+      if (bonded.isEmpty) return;
+      showModalBottomSheet(
+        context: context,
+        builder: (_) => ListView(
+          children: bonded
+              .map((d) => ListTile(
+                    title: Text(d.name ?? 'Printer'),
+                    subtitle: Text(d.address),
+                    onTap: () async {
+                      Navigator.pop(context);
+                      bool ok = false;
+                      try {
+                        bt = await BluetoothConnection.toAddress(d.address);
+                        ok = bt?.isConnected ?? false;
+                      } catch (_) {
+                        ok = false;
+                      }
+                      if (ok) {
+                        final sp = await SharedPreferences.getInstance();
+                        await sp.setString('saved_printer_mac', d.address);
+                        await sp.setString('saved_printer_name', d.name ?? 'Printer');
+                      }
+                      if (!mounted) return;
+                      setState(() {
+                        printerName = ok ? (d.name ?? 'Printer') : 'غير متصلة';
+                      });
+                    },
+                  ))
+              .toList(),
+        ),
+      );
+    } catch (_) {}
+  }
+
+  Future<void> createCards() async {
+    setState(() {
+      busy = true;
+      msg = '';
+      created = [];
+    });
+    try {
+      final rnd = Random();
+      final names = <String>[];
+      for (int i = 0; i < count; i++) {
+        names.add('${1000000 + rnd.nextInt(9000000)}');
+      }
+      final todayStr = DateTime.now().toIso8601String().substring(0, 10);
+      for (final name in names) {
+        final res = await MikroTikApi().run(widget.host, widget.user, widget.pass, '/ip/hotspot/user/add', [
+          '=name=$name',
+          '=password=',
+          '=profile=$profile',
+          '=server=all',
+          '=comment=created:$todayStr',
+        ]);
+        if (res.any((m) => m['__type__'] == '!trap')) {
+          throw Exception('create failed');
+        }
+        final check = await MikroTikApi().run(widget.host, widget.user, widget.pass, '/ip/hotspot/user/print');
+        final found = check.where((m) => m['name'] == name).toList();
+        if (found.isEmpty) throw Exception('not found');
+        final id = found.first['.id'] ?? '';
+        if (id.isNotEmpty) {
+          try {
+            await MikroTikApi().run(widget.host, widget.user, widget.pass, '/ip/hotspot/user/set', [
+              '=numbers=$id',
+              '=limit-uptime=${daysForProfile(profile)}d',
+            ]);
+          } catch (_) {}
+          try {
+            await MikroTikApi().run(widget.host, widget.user, widget.pass, '/ip/hotspot/user/set', [
+              '=numbers=$id',
+              '=limit-bytes-total=${bytesFor(profile)}',
+            ]);
+          } catch (_) {}
+        }
+      }
+      setState(() {
+        created = names;
+        msg = 'تم إنشاء $count كارت بنجاح';
+      });
+    } catch (_) {
+      setState(() {
+        msg = 'تعذر إنشاء الكارت';
+      });
+    }
+    setState(() {
+      busy = false;
+    });
+  }
+
+  Future<void> printCards() async {
+    if (created.isEmpty) {
+      setState(() {
+        msg = 'أنشئ كارت أولاً';
+      });
+      return;
+    }
+    if (bt == null || !(bt?.isConnected ?? false)) {
+      setState(() {
+        msg = 'جارٍ الاتصال بالطابعة أوتوماتيك...';
+      });
+      autoTried = false;
+      await autoConnectPrinter();
+      if (bt == null || !(bt?.isConnected ?? false)) {
+        setState(() {
+          msg = 'اختر الطابعة أولاً';
+        });
+        return;
+      }
+    }
+    try {
+      for (final num in created) {
+        final recorder = ui.PictureRecorder();
+        final canvas = ui.Canvas(recorder, ui.Rect.fromLTWH(0, 0, 384, 220));
+        canvas.drawRect(ui.Rect.fromLTWH(0, 0, 384, 220), ui.Paint()..color = const Color(0xFFFFFFFF));
+        void drawText(String text, double y, double size, bool bold) {
+          final builder = ui.ParagraphBuilder(ui.ParagraphStyle(
+            textAlign: ui.TextAlign.center,
+            fontSize: size,
+            fontWeight: bold ? ui.FontWeight.bold : ui.FontWeight.normal,
+            textDirection: ui.TextDirection.ltr,
+          ));
+          builder.pushStyle(ui.TextStyle(
+            color: const Color(0xFF000000),
+            fontSize: size,
+            fontWeight: bold ? ui.FontWeight.bold : ui.FontWeight.normal,
+          ));
+          builder.addText(text);
+          builder.pop();
+          final p = builder.build()..layout(ui.ParagraphConstraints(width: 384));
+          canvas.drawParagraph(p, ui.Offset(0, y));
+        }
+        drawText('FAZLAKA', 10, 42, true);
+        drawText('01016620065 - 01141418040', 70, 22, false);
+        drawText('------------------------------', 105, 22, false);
+        drawText(num, 130, 58, true);
+        drawText('Price: $profile | Quota: ${quotaFor(profile)}GB', 195, 22, false);
+        final pic = recorder.endRecording();
+        final img = await pic.toImage(384, 220);
+        final byteData = await img.toByteData(format: ui.ImageByteFormat.rawRgba);
+        final rgba = byteData!.buffer.asUint8List();
+        final mono = <int>[];
+        for (int y = 0; y < 220; y++) {
+          for (int x = 0; x < 384; x += 8) {
+            int b = 0;
+            for (int bit = 0; bit < 8; bit++) {
+              final idx = (y * 384 + x + bit) * 4;
+              final r = rgba[idx];
+              final g = rgba[idx + 1];
+              final bl = rgba[idx + 2];
+              final gray = (r + g + bl) ~/ 3;
+              if (gray < 150) b |= (0x80 >> bit);
+            }
+            mono.add(b);
+          }
+        }
+        final bytes = <int>[];
+        bytes.addAll([0x1B, 0x40]);
+        bytes.addAll([0x1B, 0x61, 0x01]);
+        bytes.addAll([0x1D, 0x76, 0x30, 0x00, 48, 0, 220, 0]);
+        bytes.addAll(mono);
+        bytes.addAll([0x0A, 0x0A, 0x0A]);
+        bytes.addAll([0x1D, 0x56, 0x00]);
+        bt!.output.add(Uint8List.fromList(bytes));
+        await bt!.output.allSent;
+        await Future.delayed(const Duration(milliseconds: 800));
+      }
+      setState(() {
+        msg = 'تمت الطباعة';
+      });
+    } catch (_) {
+      setState(() {
+        msg = 'تعذر الطباعة';
+      });
+    }
+  }
+
+  @override
+  void dispose() {
+    try {
+      bt?.close();
+    } catch (_) {}
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
-      child: Column(children: [
-        Container(padding: const EdgeInsets.all(16), decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(20)), child: Column(children: [
-          Align(alignment: Alignment.centerRight, child: Text(widget.ar ? 'انشاء كروت' : 'Create Cards', style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: petrol))),
-          const SizedBox(height: 16),
-          Row(children: ['20','50'].map((p) => Expanded(child: Padding(padding: const EdgeInsets.symmetric(horizontal: 4), child: GestureDetector(onTap: () => setState(() => _profile = p), child: Container(height: 58, decoration: BoxDecoration(color: _profile == p ? petrol : const Color(0xFFEDEDED), borderRadius: BorderRadius.circular(14)), alignment: Alignment.center, child: Text(p, style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold, color: _profile == p ? Colors.white : Colors.black))))))).toList()),
-          const SizedBox(height: 8),
-          Row(children: ['100','200'].map((p) => Expanded(child: Padding(padding: const EdgeInsets.symmetric(horizontal: 4), child: GestureDetector(onTap: () => setState(() => _profile = p), child: Container(height: 58, decoration: BoxDecoration(color: _profile == p ? petrol : const Color(0xFFEDEDED), borderRadius: BorderRadius.circular(14)), alignment: Alignment.center, child: Text(p, style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold, color: _profile == p ? Colors.white : Colors.black))))))).toList()),
-          const SizedBox(height: 8),
-          Text(widget.ar ? '${quotaFor(_profile)} جيجا - ${daysForProfile(_profile)} يوم' : '${quotaFor(_profile)}GB - ${daysForProfile(_profile)} days', style: const TextStyle(fontWeight: FontWeight.bold, color: petrol)),
-          const SizedBox(height: 8),
-          Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [Text(widget.ar ? 'عدد الكروت' : 'Count', style: const TextStyle(fontSize: 16)), Row(children: [IconButton(onPressed: () => setState(() => _count++), icon: const Icon(Icons.add)), Text('$_count', style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold)), IconButton(onPressed: () { if (_count > 1) setState(() => _count--); }, icon: const Icon(Icons.remove))])]),
-        ])),
-        const SizedBox(height: 16),
-        SizedBox(width: double.infinity, height: 52, child: ElevatedButton(style: ElevatedButton.styleFrom(backgroundColor: petrol, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16))), onPressed: _busy ? null : _create, child: Text(widget.ar ? 'انشاء' : 'Create', style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)))),
-        const SizedBox(height: 12),
-        SizedBox(width: double.infinity, height: 52, child: OutlinedButton(style: OutlinedButton.styleFrom(side: const BorderSide(color: petrol), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16))), onPressed: _print, child: Text(widget.ar ? 'طباعة' : 'Print', style: const TextStyle(color: petrol, fontSize: 18, fontWeight: FontWeight.bold)))),
-        const SizedBox(height: 12),
-        SizedBox(width: double.infinity, height: 52, child: ElevatedButton.icon(style: ElevatedButton.styleFrom(backgroundColor: Colors.white, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16), side: const BorderSide(color: petrol))), onPressed: _pickPrinter, icon: const Icon(Icons.bluetooth, color: petrol), label: Text(_printer == 'غير متصلة' ? (widget.ar ? 'توصيل الطابعة - أوتوماتيك' : 'Connect Printer - Auto') : '${widget.ar ? 'الطابعة' : 'Printer'}: $_printer', style: const TextStyle(color: petrol, fontSize: 16, fontWeight: FontWeight.bold)))),
-        const SizedBox(height: 6),
-        Text(widget.ar ? 'الطابعة بتتصل أوتوماتيك أول ما تفتح التطبيق' : 'Printer auto-connects on open', style: const TextStyle(fontSize: 11, color: Colors.grey)),
-        const SizedBox(height: 12),
-        if (_msg.isNotEmpty) Text(_msg, style: const TextStyle(fontWeight: FontWeight.bold)),
-        if (_created.isNotEmpty) ...[
-          const SizedBox(height: 12),
+      child: Column(
+        children: [
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(20)),
-            child: Column(children: [
-              Align(alignment: Alignment.centerRight, child: Text(widget.ar ? 'الكروت الجاهزة' : 'Ready Cards', style: const TextStyle(fontWeight: FontWeight.bold))),
-              const SizedBox(height: 8),
-              for (final c in _created)
-                Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 6),
-                  child: Column(children: [
-                    const Text('FAZLAKA', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, letterSpacing: 3)),
-                    const Text('01016620065 - 01141418040'),
-                    const Text('------------------------------'),
-                    Text(c, style: const TextStyle(fontSize: 26, fontWeight: FontWeight.bold)),
-                    Text('Price: $_profile | Quota: ${quotaFor(_profile)}GB'),
-                  ]),
+            child: Column(
+              children: [
+                const Align(
+                  alignment: Alignment.centerRight,
+                  child: Text('انشاء كروت', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: petrol)),
                 ),
-            ]),
+                const SizedBox(height: 16),
+                Row(
+                  children: ['20', '50'].map((p) {
+                    return Expanded(
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 4),
+                        child: GestureDetector(
+                          onTap: () {
+                            setState(() {
+                              profile = p;
+                            });
+                          },
+                          child: Container(
+                            height: 58,
+                            decoration: BoxDecoration(color: profile == p ? petrol : const Color(0xFFEDEDED), borderRadius: BorderRadius.circular(14)),
+                            alignment: Alignment.center,
+                            child: Text(p, style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold, color: profile == p ? Colors.white : Colors.black)),
+                          ),
+                        ),
+                      ),
+                    );
+                  }).toList(),
+                ),
+                const SizedBox(height: 8),
+                Row(
+                  children: ['100', '200'].map((p) {
+                    return Expanded(
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 4),
+                        child: GestureDetector(
+                          onTap: () {
+                            setState(() {
+                              profile = p;
+                            });
+                          },
+                          child: Container(
+                            height: 58,
+                            decoration: BoxDecoration(color: profile == p ? petrol : const Color(0xFFEDEDED), borderRadius: BorderRadius.circular(14)),
+                            alignment: Alignment.center,
+                            child: Text(p, style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold, color: profile == p ? Colors.white : Colors.black)),
+                          ),
+                        ),
+                      ),
+                    );
+                  }).toList(),
+                ),
+                const SizedBox(height: 8),
+                Text('${quotaFor(profile)} جيجا - ${daysForProfile(profile)} يوم', style: const TextStyle(fontWeight: FontWeight.bold, color: petrol)),
+                const SizedBox(height: 8),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text('عدد الكروت', style: TextStyle(fontSize: 16)),
+                    Row(
+                      children: [
+                        IconButton(
+                          onPressed: () {
+                            setState(() {
+                              count++;
+                            });
+                          },
+                          icon: const Icon(Icons.add),
+                        ),
+                        Text('$count', style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
+                        IconButton(
+                          onPressed: () {
+                            if (count > 1) {
+                              setState(() {
+                                count--;
+                              });
+                            }
+                          },
+                          icon: const Icon(Icons.remove),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ],
+            ),
           ),
+          const SizedBox(height: 16),
+          SizedBox(
+            width: double.infinity,
+            height: 52,
+            child: ElevatedButton(
+              style: ElevatedButton.styleFrom(backgroundColor: petrol, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16))),
+              onPressed: busy ? null : createCards,
+              child: const Text('انشاء', style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
+            ),
+          ),
+          const SizedBox(height: 12),
+          SizedBox(
+            width: double.infinity,
+            height: 52,
+            child: OutlinedButton(
+              style: OutlinedButton.styleFrom(side: const BorderSide(color: petrol), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16))),
+              onPressed: printCards,
+              child: const Text('طباعة', style: TextStyle(color: petrol, fontSize: 18, fontWeight: FontWeight.bold)),
+            ),
+          ),
+          const SizedBox(height: 12),
+          SizedBox(
+            width: double.infinity,
+            height: 52,
+            child: ElevatedButton.icon(
+              style: ElevatedButton.styleFrom(backgroundColor: Colors.white, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16), side: const BorderSide(color: petrol))),
+              onPressed: pickPrinter,
+              icon: const Icon(Icons.bluetooth, color: petrol),
+              label: Text(printerName == 'غير متصلة' ? 'توصيل الطابعة - أوتوماتيك' : 'الطابعة: $printerName', style: const TextStyle(color: petrol, fontSize: 16, fontWeight: FontWeight.bold)),
+            ),
+          ),
+          const SizedBox(height: 12),
+          if (msg.isNotEmpty) Text(msg, style: const TextStyle(fontWeight: FontWeight.bold)),
+          if (created.isNotEmpty)
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(20)),
+              child: Column(
+                children: [
+                  const Align(alignment: Alignment.centerRight, child: Text('الكروت الجاهزة', style: TextStyle(fontWeight: FontWeight.bold))),
+                  const SizedBox(height: 8),
+                  for (final c in created)
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 6),
+                      child: Column(
+                        children: [
+                          const Text('FAZLAKA', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, letterSpacing: 3)),
+                          const Text('01016620065 - 01141418040'),
+                          const Text('------------------------------'),
+                          Text(c, style: const TextStyle(fontSize: 26, fontWeight: FontWeight.bold)),
+                          Text('Price: $profile | Quota: ${quotaFor(profile)}GB'),
+                        ],
+                      ),
+                    ),
+                ],
+              ),
+            ),
         ],
-      ]),
+      ),
     );
   }
 }
 
-class CardsTab extends StatefulWidget { final bool ar; final String host, user, pass; const CardsTab({super.key, required this.ar, required this.host, required this.user, required this.pass}); @override State<CardsTab> createState() => _CardsTabState(); }
-class _CardsTabState extends State<CardsTab> {
-  bool _showActive = true; List<Map<String,String>> _active = [], _all = []; bool _loading = false; String _status = ''; String _delMsg = ''; String _search = ''; final _searchCtrl = TextEditingController();
-  Future<void> _load() async { setState(() { _loading = true; }); try { final disabled = await disableExpiredUsers(widget.host, widget.user, widget.pass); if (disabled > 0) setState(() => _delMsg = widget.ar ? 'تم تعطيل $disabled يوزر منتهي أوتوماتيك' : 'Disabled $disabled expired'); final a = await MikroTikApi().run(widget.host, widget.user, widget.pass, '/ip/hotspot/active/print'); final u = await MikroTikApi().run(widget.host, widget.user, widget.pass, '/ip/hotspot/user/print'); setState(() { _active = a; _all = u; _status = widget.ar ? 'متصل' : 'Connected'; }); } catch (_) { setState(() => _status = widget.ar ? 'غير متصل' : 'Disconnected'); } setState(() => _loading = false); }
-  List<Map<String,String>> get _filteredActive { if (_search.trim().isEmpty) return _active; final q = _search.trim().toLowerCase(); return _active.where((m) => (m['user'] ?? '').toLowerCase().contains(q) || (m['address'] ?? '').toLowerCase().contains(q)).toList(); }
-  List<Map<String,String>> get _filteredAll { if (_search.trim().isEmpty) return _all; final q = _search.trim().toLowerCase(); return _all.where((m) => (m['name'] ?? '').toLowerCase().contains(q) || (m['profile'] ?? '').toLowerCase().contains(q)).toList(); }
-  Future<void> _kickActive(String id, String name) async { final confirm = await showDialog<String>(context: context, builder: (_) => AlertDialog(title: Text(widget.ar ? 'اخراج $name ؟' : 'Kick $name ?'), content: Text(widget.ar ? 'تختار ايه؟' : 'Choose:'), actions: [TextButton(onPressed: () => Navigator.pop(context, 'cancel'), child: Text(widget.ar ? 'الغاء' : 'Cancel')), TextButton(onPressed: () => Navigator.pop(context, 'kick'), child: Text(widget.ar ? 'اخراج بس' : 'Kick only')), TextButton(onPressed: () => Navigator.pop(context, 'kick_disable'), child: Text(widget.ar ? 'اخراج + تعطيل' : 'Kick + Disable', style: const TextStyle(color: Colors.red)))])); if (confirm == null || confirm == 'cancel') return; try { await MikroTikApi().run(widget.host, widget.user, widget.pass, '/ip/hotspot/active/remove', ['=numbers=$id']); if (confirm == 'kick_disable') { final users = await MikroTikApi().run(widget.host, widget.user, widget.pass, '/ip/hotspot/user/print'); final found = users.where((m) => m['name'] == name).toList(); if (found.isNotEmpty) { final uid = found.first['.id'] ?? ''; if (uid.isNotEmpty) await MikroTikApi().run(widget.host, widget.user, widget.pass, '/ip/hotspot/user/set', ['=numbers=$uid', '=disabled=yes']); } } setState(() => _delMsg = widget.ar ? 'تم اخراج $name' : 'Kicked $name'); _load(); } catch (_) { setState(() => _delMsg = widget.ar ? 'تعذر الاخراج' : 'Cannot kick'); } }
-  Future<void> _kickAll() async { final confirm = await showDialog<bool>(context: context, builder: (_) => AlertDialog(title: Text(widget.ar ? 'اخراج الكل؟' : 'Kick all?'), content: Text(widget.ar ? 'هتخرج كل المتصلين؟' : 'Kick all?'), actions: [TextButton(onPressed: () => Navigator.pop(context, false), child: Text(widget.ar ? 'لا' : 'No')), TextButton(onPressed: () => Navigator.pop(context, true), child: Text(widget.ar ? 'نعم' : 'Yes'))])); if (confirm != true) return; for (final m in _active) { final id = m['.id'] ?? ''; if (id.isNotEmpty) { try { await MikroTikApi().run(widget.host, widget.user, widget.pass, '/ip/hotspot/active/remove', ['=numbers=$id']); } catch (_) {} } } setState(() => _delMsg = widget.ar ? 'تم اخراج الكل' : 'Kicked all'); _load(); }
-  Future<void> _manualDelete() async { final confirm = await showDialog<bool>(context: context, builder: (_) => AlertDialog(title: Text(widget.ar ? 'حذف المنتهية؟' : 'Delete expired?'), content: Text(widget.ar ? 'هيمسح كل اليوزرات المعطلة؟' : 'Delete all disabled?'), actions: [TextButton(onPressed: () => Navigator.pop(context, false), child: Text(widget.ar ? 'لا' : 'No')), TextButton(onPressed: () => Navigator.pop(context, true), child: Text(widget.ar ? 'نعم احذف' : 'Yes delete'))])); if (confirm != true) return; setState(() => _delMsg = widget.ar ? 'جارٍ الحذف...' : 'Deleting...'); final d = await deleteDisabledUsers(widget.host, widget.user, widget.pass); setState(() => _delMsg = widget.ar ? 'تم حذف $d يوزر' : 'Deleted $d'); _load(); }
-  Future<void> _enableUser(String id, String name) async { try { await MikroTikApi().run(widget.host, widget.user, widget.pass, '/ip/hotspot/user/set', ['=numbers=$id', '=disabled=no']); setState(() => _delMsg = widget.ar ? 'تم تفعيل $name' : 'Enabled $name'); _load(); } catch (_) {} }
-  @override void initState() { super.initState(); _load(); }
-  @override void dispose() { _searchCtrl.dispose(); super.dispose(); }
-  @override Widget build(BuildContext context) { return SingleChildScrollView(padding: const EdgeInsets.all(16), child: Column(children: [ Container(padding: const EdgeInsets.all(16), decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(20)), child: Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [Text(widget.ar ? 'حالة الراوتر' : 'Router', style: const TextStyle(fontWeight: FontWeight.bold)), Text('$_status')])), const SizedBox(height: 12), Row(children: [Expanded(child: SizedBox(height: 48, child: ElevatedButton(style: ElevatedButton.styleFrom(backgroundColor: Colors.orange, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14))), onPressed: _kickAll, child: Text(widget.ar ? 'اخراج الكل' : 'Kick All', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold))))), const SizedBox(width: 8), Expanded(child: SizedBox(height: 48, child: ElevatedButton(style: ElevatedButton.styleFrom(backgroundColor: Colors.red, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14))), onPressed: _manualDelete, child: Text(widget.ar ? 'حذف المنتهية' : 'Delete Expired', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)))))]), if (_delMsg.isNotEmpty) Padding(padding: const EdgeInsets.only(top: 8), child: Text(_delMsg, style: const TextStyle(fontWeight: FontWeight.bold, color: petrol))), const SizedBox(height: 12), Row(children: [Expanded(child: ElevatedButton(style: ElevatedButton.styleFrom(backgroundColor: _showActive ? petrol : Colors.white), onPressed: () { setState(() { _showActive = true; _search = ''; _searchCtrl.clear(); }); }, child: Text(widget.ar ? 'المتصلين الآن' : 'Online', style: TextStyle(color: _showActive ? Colors.white : petrol)))), const SizedBox(width: 8), Expanded(child: ElevatedButton(style: ElevatedButton.styleFrom(backgroundColor: !_showActive ? petrol : Colors.white), onPressed: () { setState(() { _showActive = false; _search = ''; _searchCtrl.clear(); }); }, child: Text(widget.ar ? 'كل الكروت' : 'All Cards', style: TextStyle(color: !_showActive ? Colors.white : petrol))))]), const SizedBox(height: 12), TextField(controller: _searchCtrl, onChanged: (v) => setState(() => _search = v), decoration: InputDecoration(hintText: _showActive ? (widget.ar ? 'بحث - رقم أو IP' : 'Search active') : (widget.ar ? 'بحث - رقم أو بروفايل' : 'Search cards'), prefixIcon: const Icon(Icons.search, color: petrol), filled: true, fillColor: Colors.white, border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide.none))), const SizedBox(height: 8), Text(widget.ar ? 'النشط: ${_active.length} | الكروت: ${_all.length}' : 'Active: ${_active.length} | Cards: ${_all.length}'), const SizedBox(height: 12), if (_loading) const CircularProgressIndicator(), if (!_loading && _showActive) ..._filteredActive.map((m) { final name = m['user'] ?? ''; final id = m['.id'] ?? ''; return Card(child: ListTile(title: Text('$name - ${widget.ar ? 'نشط' : 'Active'}'), subtitle: Text('${m['address'] ?? ''} - ${m['uptime'] ?? ''}'), trailing: IconButton(icon: const Icon(Icons.logout, color: Colors.red), onPressed: () => _kickActive(id, name)))); }), if (!_loading && !_showActive) ..._filteredAll.map((m) { final isDis = (m['disabled'] ?? 'false') == 'true'; final left = remainingDays(m); return Card(child: ListTile(title: Text(m['name'] ?? ''), subtitle: Text('${m['profile'] ?? ''} - ${isDis ? (widget.ar ? 'معطل' : 'Disabled') : (widget.ar ? 'شغال - باقي $left يوم' : 'Active')}'), trailing: isDis ? IconButton(icon: const Icon(Icons.check_circle, color: Colors.green), onPressed: () => _enableUser(m['.id'] ?? '', m['name'] ?? '')) : null)); }), ])); }
+class CardsTab extends StatefulWidget {
+  final String host;
+  final String user;
+  final String pass;
+  const CardsTab({super.key, required this.host, required this.user, required this.pass});
+  @override
+  State<CardsTab> createState() => _CardsTabState();
 }
 
-class SalesTab extends StatefulWidget { final bool ar; const SalesTab({super.key, required this.ar}); @override State<SalesTab> createState() => _SalesTabState(); }
-class _SalesTabState extends State<SalesTab> { List<Map<String, dynamic>> _sales = []; List<Map<String, dynamic>> _expenses = []; @override void initState() { super.initState(); _load(); } Future<void> _load() async { final s = await loadAllSales(); final e = await loadAllExpenses(); setState(() { _sales = s; _expenses = e; }); } @override Widget build(BuildContext context) { final cur = monthKeyOf(DateTime.now()); final curSales = _sales.where((e) => e['m'] == cur).toList(); final curExp = _expenses.where((e) => e['m'] == cur).toList(); final curTotal = curSales.fold<int>(0, (a, b) => a + _toInt(b['pr'])); final curExpTotal = curExp.fold<int>(0, (a, b) => a + _toInt(b['a'])); final curNet = curTotal - curExpTotal; final months = {..._sales.map((e) => e['m'].toString()), ..._expenses.map((e) => e['m'].toString())}.toList()..sort((a, b) => b.compareTo(a)); if (months.isEmpty) months.add(cur); return SingleChildScrollView(padding: const EdgeInsets.all(16), child: Column(children: [ Container(width: double.infinity, padding: const EdgeInsets.all(20), decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(20)), child: Column(children: [Text(widget.ar ? 'مبيعات ${monthLabel(cur)}' : 'Sales', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)), const SizedBox(height: 12), Text('${curSales.length} ${widget.ar ? 'كارت' : 'cards'}', style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold)), Text('$curTotal ${widget.ar ? 'جنيه مبيعات' : 'EGP'}', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: petrol)), Text('$curExpTotal ${widget.ar ? 'جنيه مصاريف' : 'Expenses'}'), Text('${widget.ar ? 'الصافي' : 'Net'}: $curNet', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: curNet >= 0 ? Colors.green : Colors.red))])), const SizedBox(height: 16), Align(alignment: Alignment.centerRight, child: Text(widget.ar ? 'تقارير الشهور - مكسب / خسارة' : 'Monthly Reports', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: petrol))), const SizedBox(height: 10), ...months.map((m) { final ms = _sales.where((e) => e['m'] == m).toList(); final me = _expenses.where((e) => e['m'] == m).toList(); final tot = ms.fold<int>(0, (a, b) => a + _toInt(b['pr'])); final exp = me.fold<int>(0, (a, b) => a + _toInt(b['a'])); final net = tot - exp; return Container(margin: const EdgeInsets.only(bottom: 10), padding: const EdgeInsets.all(16), decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16)), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [Text(monthLabel(m), style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)), Container(padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5), decoration: BoxDecoration(color: net >= 0 ? Colors.green : Colors.red, borderRadius: BorderRadius.circular(20)), child: Text(net >= 0 ? '${widget.ar ? 'مكسب' : 'Profit'} $net ج' : '${widget.ar ? 'خسارة' : 'Loss'} ${-net} ج', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)))]), const SizedBox(height: 8), Text('${widget.ar ? 'المبيعات' : 'Sales'}: $tot ج - ${widget.ar ? 'المصاريف' : 'Expenses'}: $exp ج')])); }), ])); } }
+class _CardsTabState extends State<CardsTab> {
+  List<Map<String, String>> active = [];
+  List<Map<String, String>> all = [];
+  bool loading = false;
+  String status = '';
 
-class AccountTab extends StatefulWidget { final bool ar; const AccountTab({super.key, required this.ar}); @override State<AccountTab> createState() => _AccountTabState(); }
-class _AccountTabState extends State<AccountTab> { int _sales = 0, _expenses = 0; Future<void> _load() async { final s = await loadAllSales(); final e = await loadAllExpenses(); final cur = monthKeyOf(DateTime.now()); setState(() { _sales = s.where((x) => x['m'] == cur).fold<int>(0, (a, b) => a + _toInt(b['pr'])); _expenses = e.where((x) => x['m'] == cur).fold<int>(0, (a, b) => a + _toInt(b['a'])); }); } @override void initState() { super.initState(); _load(); } Future<void> _addExpense() async { final c = TextEditingController(); final n = TextEditingController(); final v = await showDialog<bool>(context: context, builder: (_) => AlertDialog(title: Text(widget.ar ? 'اضافة مصروف' : 'Add Expense'), content: Column(mainAxisSize: MainAxisSize.min, children: [TextField(controller: c, keyboardType: TextInputType.number, decoration: InputDecoration(labelText: widget.ar ? 'المبلغ' : 'Amount')), const SizedBox(height: 8), TextField(controller: n, decoration: InputDecoration(labelText: widget.ar ? 'ملاحظة' : 'Note'))]), actions: [TextButton(onPressed: () => Navigator.pop(context, false), child: Text(widget.ar ? 'الغاء' : 'Cancel')), TextButton(onPressed: () => Navigator.pop(context, true), child: Text(widget.ar ? 'حفظ' : 'Save'))])); if (v == true) { final amt = int.tryParse(c.text) ?? 0; if (amt > 0) await saveMonthlyExpense(amt, n.text); _load(); } } Future<void> _reset() async { final sp = await SharedPreferences.getInstance(); final cur = monthKeyOf(DateTime.now()); final s = await loadAllSales(); final e = await loadAllExpenses(); final newS = s.where((x) => x['m'] != cur).toList(); final newE = e.where((x) => x['m'] != cur).toList(); await sp.setString('sales_all', jsonEncode(newS)); await sp.setString('expenses_all', jsonEncode(newE)); _load(); } @override Widget build(BuildContext context) { final net = _sales - _expenses; return Padding(padding: const EdgeInsets.all(16), child: Column(children: [Container(width: double.infinity, padding: const EdgeInsets.all(20), decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(20)), child: Column(children: [Text('${widget.ar ? 'الصافي' : 'Net'}: $net', style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: petrol)), const SizedBox(height: 8), Text('${widget.ar ? 'المصاريف' : 'Expenses'}: $_expenses'), Text('${widget.ar ? 'المبيعات' : 'Sales'}: $_sales')])), const SizedBox(height: 12), SizedBox(width: double.infinity, height: 48, child: ElevatedButton(style: ElevatedButton.styleFrom(backgroundColor: petrol), onPressed: _addExpense, child: Text(widget.ar ? 'اضافة مصروف' : 'Add Expense', style: const TextStyle(color: Colors.white)))), const SizedBox(height: 8), SizedBox(width: double.infinity, height: 48, child: OutlinedButton(onPressed: _reset, child: Text(widget.ar ? 'تصفير الشهر الحالي فقط' : 'Reset Current Month')))])); } }
+  @override
+  void initState() {
+    super.initState();
+    loadCards();
+  }
+
+  Future<void> loadCards() async {
+    setState(() {
+      loading = true;
+    });
+    try {
+      final a = await MikroTikApi().run(widget.host, widget.user, widget.pass, '/ip/hotspot/active/print');
+      final u = await MikroTikApi().run(widget.host, widget.user, widget.pass, '/ip/hotspot/user/print');
+      setState(() {
+        active = a;
+        all = u;
+        status = 'متصل';
+      });
+    } catch (_) {
+      setState(() {
+        status = 'غير متصل';
+      });
+    }
+    setState(() {
+      loading = false;
+    });
+  }
+
+  Future<void> kickActive(String id) async {
+    try {
+      await MikroTikApi().run(widget.host, widget.user, widget.pass, '/ip/hotspot/active/remove', ['=numbers=$id']);
+      loadCards();
+    } catch (_) {}
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(20)),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text('حالة الراوتر', style: TextStyle(fontWeight: FontWeight.bold)),
+                Text(status),
+              ],
+            ),
+          ),
+          const SizedBox(height: 12),
+          Text('النشط: ${active.length} | الكروت: ${all.length}'),
+          const SizedBox(height: 12),
+          if (loading) const CircularProgressIndicator(),
+          ...active.map((m) {
+            final name = m['user'] ?? '';
+            final id = m['.id'] ?? '';
+            return Card(
+              child: ListTile(
+                title: Text('$name - نشط'),
+                subtitle: Text('${m['address'] ?? ''} - ${m['uptime'] ?? ''}'),
+                trailing: IconButton(icon: const Icon(Icons.logout, color: Colors.red), onPressed: () => kickActive(id)),
+              ),
+            );
+          }),
+        ],
+      ),
+    );
+  }
+}
