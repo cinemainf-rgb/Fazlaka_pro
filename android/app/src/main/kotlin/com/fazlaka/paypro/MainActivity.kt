@@ -1,6 +1,0 @@
-package com.fazlaka.paypro
-
-import io.flutter.embedding.android.FlutterActivity
-
-class MainActivity : FlutterActivity() {
-}
