@@ -112,7 +112,7 @@ class MikroTikApi {
     return all;
   }
 
-List>? tryParse() {
+  List>? tryParse() {
     int pos = 0;
     final result = >[];
     var cur = <String, String>{};
