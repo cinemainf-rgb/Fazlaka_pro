@@ -6,13 +6,13 @@ class MikroTikApi {
   Socket? socket;
   List<int> buf = [];
 
-  Future<List<Map<String, String>>> run(
+  Future<List>> run(
     String host,
     String user,
     String pass,
-    String cmd,
-    [List<String> args = const []],
-  ) async {
+    String cmd, [
+    List<String> args = const [],
+  ]) async {
     try {
       return await runLogin(host, user, pass, cmd, args, true);
     } catch (_) {
@@ -20,7 +20,7 @@ class MikroTikApi {
     }
   }
 
-  Future<List<Map<String, String>>> runLogin(
+  Future<List>> runLogin(
     String host,
     String user,
     String pass,
@@ -94,7 +94,7 @@ class MikroTikApi {
     await socket!.flush();
   }
 
-  Future<List<Map<String, String>>> readSentence() async {
+  Future<List>> readSentence() async {
     while (true) {
       final parsed = tryParse();
       if (parsed != null) return parsed;
@@ -102,8 +102,8 @@ class MikroTikApi {
     }
   }
 
-  Future<List<Map<String, String>>> readAll() async {
-    final all = <Map<String, String>>[];
+  Future<List>> readAll() async {
+    final all = >[];
     while (true) {
       final s = await readSentence();
       all.addAll(s);
@@ -112,9 +112,9 @@ class MikroTikApi {
     return all;
   }
 
-  List<Map<String, String>>? tryParse() {
+List>? tryParse() {
     int pos = 0;
-    final result = <Map<String, String>>[];
+    final result = >[];
     var cur = <String, String>{};
     while (pos < buf.length) {
       int len = buf[pos];
