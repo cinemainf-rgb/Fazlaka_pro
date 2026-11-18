@@ -5,7 +5,6 @@ import 'login_screen.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
-
   @override
   State<SplashScreen> createState() => _SplashScreenState();
 }
@@ -26,7 +25,12 @@ class _SplashScreenState extends State<SplashScreen> {
           localizedReason: 'افتح بصمتك للدخول لـ FAZLAKA',
           options: const AuthenticationOptions(biometricOnly: true, stickyAuth: true),
         );
-        if (ok) _goToLogin();
+        if (ok) {
+          _goToLogin();
+          return;
+        }
+        // لو لغى البصمة، نسيبه على الشاشة ويضغط الزرار
+        return;
       } else {
         _goToLogin();
       }
@@ -50,10 +54,7 @@ class _SplashScreenState extends State<SplashScreen> {
           children: [
             const Icon(Icons.fingerprint, size: 100, color: Colors.white),
             const SizedBox(height: 20),
-            const Text(
-              'FAZLAKA PAY PRO',
-              style: TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold, letterSpacing: 2),
-            ),
+            const Text('FAZLAKA PAY PRO', style: TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold, letterSpacing: 2)),
             const SizedBox(height: 20),
             TextButton(
               onPressed: _checkFingerprint,
