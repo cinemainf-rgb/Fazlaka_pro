@@ -11,7 +11,6 @@ import '../core/mikrotik_api.dart';
 class RouterTab extends StatefulWidget {
   final String host, user, pass;
   const RouterTab({super.key, required this.host, required this.user, required this.pass});
-
   @override
   State<RouterTab> createState() => _RouterTabState();
 }
@@ -47,27 +46,17 @@ class _RouterTabState extends State<RouterTab> {
       BluetoothDevice? target;
       for (final d in bonded) {
         final n = (d.name ?? '').toLowerCase();
-        if (savedMac.isNotEmpty && d.address == savedMac) {
-          target = d;
-          break;
-        }
-        if (n.contains('razytech') || n.contains('5890')) {
-          target = d;
-          break;
-        }
+        if (savedMac.isNotEmpty && d.address == savedMac) { target = d; break; }
+        if (n.contains('razytech') || n.contains('5890')) { target = d; break; }
       }
       if (target == null) return;
       if (bt != null && bt!.isConnected) return;
-      try {
-        bt = await BluetoothConnection.toAddress(target.address);
-      } catch (_) {}
+      try { bt = await BluetoothConnection.toAddress(target.address); } catch (_) {}
       if (bt?.isConnected ?? false) {
         await sp.setString('saved_printer_mac', target.address);
         await sp.setString('saved_printer_name', target.name ?? 'Printer');
         if (!mounted) return;
-        setState(() {
-          printerName = target!.name ?? 'Printer';
-        });
+        setState(() { printerName = target!.name ?? 'Printer'; });
       }
     } catch (_) {}
   }
@@ -83,42 +72,29 @@ class _RouterTabState extends State<RouterTab> {
       showModalBottomSheet(
         context: context,
         builder: (_) => ListView(
-          children: bonded
-              .map((d) => ListTile(
-                    title: Text(d.name ?? 'Printer'),
-                    subtitle: Text(d.address),
-                    onTap: () async {
-                      Navigator.pop(context);
-                      bool ok = false;
-                      try {
-                        bt = await BluetoothConnection.toAddress(d.address);
-                        ok = bt?.isConnected ?? false;
-                      } catch (_) {
-                        ok = false;
-                      }
-                      if (ok) {
-                        final sp = await SharedPreferences.getInstance();
-                        await sp.setString('saved_printer_mac', d.address);
-                        await sp.setString('saved_printer_name', d.name ?? 'Printer');
-                      }
-                      if (!mounted) return;
-                      setState(() {
-                        printerName = ok ? (d.name ?? 'Printer') : 'غير متصلة';
-                      });
-                    },
-                  ))
-              .toList(),
+          children: bonded.map((d) => ListTile(
+            title: Text(d.name ?? 'Printer'),
+            subtitle: Text(d.address),
+            onTap: () async {
+              Navigator.pop(context);
+              bool ok = false;
+              try { bt = await BluetoothConnection.toAddress(d.address); ok = bt?.isConnected ?? false; } catch (_) { ok = false; }
+              if (ok) {
+                final sp = await SharedPreferences.getInstance();
+                await sp.setString('saved_printer_mac', d.address);
+                await sp.setString('saved_printer_name', d.name ?? 'Printer');
+              }
+              if (!mounted) return;
+              setState(() { printerName = ok ? (d.name ?? 'Printer') : 'غير متصلة'; });
+            },
+          )).toList(),
         ),
       );
     } catch (_) {}
   }
 
   Future<void> createCards() async {
-    setState(() {
-      busy = true;
-      msg = '';
-      created = [];
-    });
+    setState(() { busy = true; msg = ''; created = []; });
     try {
       final rnd = Random();
       final names = <String>[];
@@ -127,62 +103,31 @@ class _RouterTabState extends State<RouterTab> {
       }
       final todayStr = DateTime.now().toIso8601String().substring(0, 10);
       for (final name in names) {
-        final res = await MikroTikApi().run(widget.host, widget.user, widget.pass, '/ip/hotspot/user/add', [
-          '=name=$name',
-          '=password=',
-          '=profile=$profile',
-          '=server=all',
-          '=comment=created:$todayStr',
-        ]);
-        if (res.any((m) => m['__type__'] == '!trap')) {
-          throw Exception('create failed');
-        }
+        final res = await MikroTikApi().run(widget.host, widget.user, widget.pass, '/ip/hotspot/user/add', ['=name=$name', '=password=', '=profile=$profile', '=server=all', '=comment=created:$todayStr']);
+        if (res.any((m) => m['__type__'] == '!trap')) throw Exception('create failed');
         final check = await MikroTikApi().run(widget.host, widget.user, widget.pass, '/ip/hotspot/user/print');
         final found = check.where((m) => m['name'] == name).toList();
         if (found.isEmpty) throw Exception('not found');
         final id = found.first['.id'] ?? '';
         if (id.isNotEmpty) {
-          try {
-            await MikroTikApi().run(widget.host, widget.user, widget.pass, '/ip/hotspot/user/set', [
-              '=numbers=$id',
-              '=limit-uptime=${daysForProfile(profile)}d',
-            ]);
-          } catch (_) {}
-          try {
-            await MikroTikApi().run(widget.host, widget.user, widget.pass, '/ip/hotspot/user/set', [
-              '=numbers=$id',
-              '=limit-bytes-total=${bytesFor(profile)}',
-            ]);
-          } catch (_) {}
+          try { await MikroTikApi().run(widget.host, widget.user, widget.pass, '/ip/hotspot/user/set', ['=numbers=$id', '=limit-uptime=${daysForProfile(profile)}d']); } catch (_) {}
+          try { await MikroTikApi().run(widget.host, widget.user, widget.pass, '/ip/hotspot/user/set', ['=numbers=$id', '=limit-bytes-total=${bytesFor(profile)}']); } catch (_) {}
         }
       }
-      setState(() {
-        created = names;
-        msg = 'تم إنشاء $count كارت بنجاح';
-      });
+      setState(() { created = names; msg = 'تم إنشاء $count كارت بنجاح'; });
     } catch (_) {
-      setState(() {
-        msg = 'تعذر إنشاء الكارت';
-      });
+      setState(() { msg = 'تعذر إنشاء الكارت'; });
     }
-    setState(() {
-      busy = false;
-    });
+    setState(() { busy = false; });
   }
 
   Future<void> printCards() async {
-    if (created.isEmpty) {
-      setState(() { msg = 'أنشئ كارت أولاً'; });
-      return;
-    }
+    if (created.isEmpty) { setState(() { msg = 'أنشئ كارت أولاً'; }); return; }
     if (bt == null || !(bt?.isConnected ?? false)) {
       setState(() { msg = 'جارٍ الاتصال بالطابعة أوتوماتيك...'; });
       autoTried = false;
       await autoConnectPrinter();
-      if (bt == null || !(bt?.isConnected ?? false)) {
-        setState(() { msg = 'اختر الطابعة أولاً'; });
-        return;
-      }
+      if (bt == null || !(bt?.isConnected ?? false)) { setState(() { msg = 'اختر الطابعة أولاً'; }); return; }
     }
     try {
       for (final num in created) {
@@ -190,17 +135,8 @@ class _RouterTabState extends State<RouterTab> {
         final canvas = ui.Canvas(recorder, ui.Rect.fromLTWH(0, 0, 384, 220));
         canvas.drawRect(ui.Rect.fromLTWH(0, 0, 384, 220), ui.Paint()..color = const Color(0xFFFFFFFF));
         void drawText(String text, double y, double size, bool bold) {
-          final builder = ui.ParagraphBuilder(ui.ParagraphStyle(
-            textAlign: ui.TextAlign.center,
-            fontSize: size,
-            fontWeight: bold ? ui.FontWeight.bold : ui.FontWeight.normal,
-            textDirection: ui.TextDirection.ltr,
-          ));
-          builder.pushStyle(ui.TextStyle(
-            color: const Color(0xFF000000),
-            fontSize: size,
-            fontWeight: bold ? ui.FontWeight.bold : ui.FontWeight.normal,
-          ));
+          final builder = ui.ParagraphBuilder(ui.ParagraphStyle(textAlign: ui.TextAlign.center, fontSize: size, fontWeight: bold ? ui.FontWeight.bold : ui.FontWeight.normal, textDirection: ui.TextDirection.ltr));
+          builder.pushStyle(ui.TextStyle(color: const Color(0xFF000000), fontSize: size, fontWeight: bold ? ui.FontWeight.bold : ui.FontWeight.normal));
           builder.addText(text);
           builder.pop();
           final p = builder.build()..layout(ui.ParagraphConstraints(width: 384));
@@ -264,48 +200,11 @@ class _RouterTabState extends State<RouterTab> {
             decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(20)),
             child: Column(
               children: [
-                const Align(
-                  alignment: Alignment.centerRight,
-                  child: Text('انشاء كروت', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: petrol)),
-                ),
+                const Align(alignment: Alignment.centerRight, child: Text('انشاء كروت', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: petrol))),
                 const SizedBox(height: 16),
-                Row(
-                  children: ['20', '50'].map((p) {
-                    return Expanded(
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 4),
-                        child: GestureDetector(
-                          onTap: () => setState(() => profile = p),
-                          child: Container(
-                            height: 58,
-                            decoration: BoxDecoration(color: profile == p ? petrol : const Color(0xFFEDEDED), borderRadius: BorderRadius.circular(14)),
-                            alignment: Alignment.center,
-                            child: Text(p, style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold, color: profile == p ? Colors.white : Colors.black)),
-                          ),
-                        ),
-                      ),
-                    );
-                  }).toList(),
-                ),
+                Row(children: ['20', '50'].map((p) => Expanded(child: Padding(padding: const EdgeInsets.symmetric(horizontal: 4), child: GestureDetector(onTap: () => setState(() => profile = p), child: Container(height: 58, decoration: BoxDecoration(color: profile == p ? petrol : const Color(0xFFEDEDED), borderRadius: BorderRadius.circular(14)), alignment: Alignment.center, child: Text(p, style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold, color: profile == p ? Colors.white : Colors.black))))))).toList()),
                 const SizedBox(height: 8),
-                Row(
-                  children: ['100', '200'].map((p) {
-                    return Expanded(
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 4),
-                        child: GestureDetector(
-                          onTap: () => setState(() => profile = p),
-                          child: Container(
-                            height: 58,
-                            decoration: BoxDecoration(color: profile == p ? petrol : const Color(0xFFEDEDED), borderRadius: BorderRadius.circular(14)),
-                            alignment: Alignment.center,
-                            child: Text(p, style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold, color: profile == p ? Colors.white : Colors.black)),
-                          ),
-                        ),
-                      ),
-                    );
-                  }).toList(),
-                ),
+                Row(children: ['100', '200'].map((p) => Expanded(child: Padding(padding: const EdgeInsets.symmetric(horizontal: 4), child: GestureDetector(onTap: () => setState(() => profile = p), child: Container(height: 58, decoration: BoxDecoration(color: profile == p ? petrol : const Color(0xFFEDEDED), borderRadius: BorderRadius.circular(14)), alignment: Alignment.center, child: Text(p, style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold, color: profile == p ? Colors.white : Colors.black))))))).toList()),
                 const SizedBox(height: 8),
                 Text('${quotaFor(profile)} جيجا - ${daysForProfile(profile)} يوم', style: const TextStyle(fontWeight: FontWeight.bold, color: petrol)),
                 const SizedBox(height: 8),
@@ -313,49 +212,18 @@ class _RouterTabState extends State<RouterTab> {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     const Text('عدد الكروت', style: TextStyle(fontSize: 16)),
-                    Row(
-                      children: [
-                        IconButton(onPressed: () => setState(() => count++), icon: const Icon(Icons.add)),
-                        Text('$count', style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
-                        IconButton(onPressed: () { if (count > 1) setState(() => count--); }, icon: const Icon(Icons.remove)),
-                      ],
-                    ),
+                    Row(children: [IconButton(onPressed: () => setState(() => count++), icon: const Icon(Icons.add)), Text('$count', style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold)), IconButton(onPressed: () { if (count > 1) setState(() => count--); }, icon: const Icon(Icons.remove))]),
                   ],
                 ),
               ],
             ),
           ),
           const SizedBox(height: 16),
-          SizedBox(
-            width: double.infinity,
-            height: 52,
-            child: ElevatedButton(
-              style: ElevatedButton.styleFrom(backgroundColor: petrol, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16))),
-              onPressed: busy ? null : createCards,
-              child: const Text('انشاء', style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
-            ),
-          ),
+          SizedBox(width: double.infinity, height: 52, child: ElevatedButton(style: ElevatedButton.styleFrom(backgroundColor: petrol, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16))), onPressed: busy ? null : createCards, child: const Text('انشاء', style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)))),
           const SizedBox(height: 12),
-          SizedBox(
-            width: double.infinity,
-            height: 52,
-            child: OutlinedButton(
-              style: OutlinedButton.styleFrom(side: const BorderSide(color: petrol), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16))),
-              onPressed: printCards,
-              child: const Text('طباعة', style: TextStyle(color: petrol, fontSize: 18, fontWeight: FontWeight.bold)),
-            ),
-          ),
+          SizedBox(width: double.infinity, height: 52, child: OutlinedButton(style: OutlinedButton.styleFrom(side: const BorderSide(color: petrol), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16))), onPressed: printCards, child: const Text('طباعة', style: TextStyle(color: petrol, fontSize: 18, fontWeight: FontWeight.bold)))),
           const SizedBox(height: 12),
-          SizedBox(
-            width: double.infinity,
-            height: 52,
-            child: ElevatedButton.icon(
-              style: ElevatedButton.styleFrom(backgroundColor: Colors.white, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16), side: const BorderSide(color: petrol))),
-              onPressed: pickPrinter,
-              icon: const Icon(Icons.bluetooth, color: petrol),
-              label: Text(printerName == 'غير متصلة' ? 'توصيل الطابعة - أوتوماتيك' : 'الطابعة: $printerName', style: const TextStyle(color: petrol, fontSize: 16, fontWeight: FontWeight.bold)),
-            ),
-          ),
+          SizedBox(width: double.infinity, height: 52, child: ElevatedButton.icon(style: ElevatedButton.styleFrom(backgroundColor: Colors.white, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16), side: const BorderSide(color: petrol))), onPressed: pickPrinter, icon: const Icon(Icons.bluetooth, color: petrol), label: Text(printerName == 'غير متصلة' ? 'توصيل الطابعة - أوتوماتيك' : 'الطابعة: $printerName', style: const TextStyle(color: petrol, fontSize: 16, fontWeight: FontWeight.bold)))),
           const SizedBox(height: 12),
           if (msg.isNotEmpty) Text(msg, style: const TextStyle(fontWeight: FontWeight.bold)),
           if (created.isNotEmpty)
@@ -369,15 +237,7 @@ class _RouterTabState extends State<RouterTab> {
                   for (final c in created)
                     Padding(
                       padding: const EdgeInsets.symmetric(vertical: 6),
-                      child: Column(
-                        children: [
-                          const Text('FAZLAKA', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, letterSpacing: 3)),
-                          const Text('01016620065 - 01141418040'),
-                          const Text('------------------------------'),
-                          Text(c, style: const TextStyle(fontSize: 26, fontWeight: FontWeight.bold)),
-                          Text('Price: $profile | Quota: ${quotaFor(profile)}GB'),
-                        ],
-                      ),
+                      child: Column(children: [const Text('FAZLAKA', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, letterSpacing: 3)), const Text('01016620065 - 01141418040'), const Text('------------------------------'), Text(c, style: const TextStyle(fontSize: 26, fontWeight: FontWeight.bold)), Text('Price: $profile | Quota: ${quotaFor(profile)}GB')]),
                     ),
                 ],
               ),
