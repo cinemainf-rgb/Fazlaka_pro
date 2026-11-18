@@ -4,14 +4,14 @@ import 'package:crypto/crypto.dart';
 
 class MikroTikApi {
   Socket? socket;
-  List buf = [];
+  List<int> buf = [];
 
-  Future run(
+  Future<List<Map<String, String>>> run(
     String host,
     String user,
     String pass,
     String cmd,
-    [List args = const []],
+    [List<String> args = const []],
   ) async {
     try {
       return await runLogin(host, user, pass, cmd, args, true);
@@ -20,24 +20,22 @@ class MikroTikApi {
     }
   }
 
-  Future runLogin(
+  Future<List<Map<String, String>>> runLogin(
     String host,
     String user,
     String pass,
     String cmd,
-    List args,
+    List<String> args,
     bool useChallenge,
   ) async {
     buf = [];
     try {
       socket = await Socket.connect(host, 8728, timeout: const Duration(seconds: 8));
-      socket!.listen((d) {
-        buf.addAll(d);
-      });
+      socket!.listen((d) { buf.addAll(d); });
       if (useChallenge) {
         final chal = await loginStep(user);
-        List hexToBytes(String hex) {
-          final out = [];
+        List<int> hexToBytes(String hex) {
+          final out = <int>[];
           for (int i = 0; i < hex.length; i += 2) {
             out.add(int.parse(hex.substring(i, i + 2), radix: 16));
           }
@@ -49,16 +47,11 @@ class MikroTikApi {
         await send(['/login', '=name=$user', '=password=$pass']);
       }
       final loginRes = await readSentence();
-      if (loginRes.any((m) => m['__type__'] == '!trap')) {
-        throw Exception('login failed');
-      }
+      if (loginRes.any((m) => m['__type__'] == '!trap')) throw Exception('login failed');
       await send([cmd, ...args]);
-      final result = await readAll();
-      return result;
+      return await readAll();
     } finally {
-      try {
-        await socket?.close();
-      } catch (_) {}
+      try { await socket?.close(); } catch (_) {}
       socket = null;
       buf = [];
     }
@@ -73,8 +66,8 @@ class MikroTikApi {
     throw Exception('no challenge');
   }
 
-  Future<void> send(List words) async {
-    final out = [];
+  Future<void> send(List<String> words) async {
+    final out = <int>[];
     for (final w in words) {
       final b = utf8.encode(w);
       if (b.length < 0x80) {
@@ -94,7 +87,7 @@ class MikroTikApi {
     await socket!.flush();
   }
 
-  Future readSentence() async {
+  Future<List<Map<String, String>>> readSentence() async {
     while (true) {
       final parsed = tryParse();
       if (parsed != null) return parsed;
@@ -102,8 +95,8 @@ class MikroTikApi {
     }
   }
 
-  Future readAll() async {
-    final all = [];
+  Future<List<Map<String, String>>> readAll() async {
+    final all = <Map<String, String>>[];
     while (true) {
       final s = await readSentence();
       all.addAll(s);
@@ -112,18 +105,15 @@ class MikroTikApi {
     return all;
   }
 
-  tryParse() {
+  List<Map<String, String>>? tryParse() {
     int pos = 0;
-    final result = [];
-    var cur = {};
+    final result = <Map<String, String>>[];
+    var cur = <String, String>{};
     while (pos < buf.length) {
       int len = buf[pos];
       pos++;
       if (len == 0) {
-        if (cur.isNotEmpty) {
-          result.add(cur);
-          cur = {};
-        }
+        if (cur.isNotEmpty) { result.add(cur); cur = <String, String>{}; }
         buf = buf.sublist(pos);
         return result;
       }
@@ -136,24 +126,18 @@ class MikroTikApi {
           if (pos + 1 >= buf.length) return null;
           len = ((len & 0x1F) << 16) | (buf[pos] << 8) | buf[pos + 1];
           pos += 2;
-        } else {
-          return null;
-        }
+        } else { return null; }
       }
       if (pos + len > buf.length) return null;
+      // السطر اللي كان واقع - ده الصح بتاعه
       final word = utf8.decode(buf.sublist(pos, pos + len), allowMalformed: true);
       pos += len;
       if (word.startsWith('!')) {
-        if (cur.isNotEmpty) {
-          result.add(cur);
-          cur = {};
-        }
+        if (cur.isNotEmpty) { result.add(cur); cur = <String, String>{}; }
         cur['__type__'] = word;
       } else if (word.startsWith('=')) {
         final eq = word.indexOf('=', 1);
-        if (eq > 0) {
-          cur[word.substring(1, eq)] = word.substring(eq + 1);
-        }
+        if (eq > 0) cur[word.substring(1, eq)] = word.substring(eq + 1);
       }
     }
     return null;
@@ -167,7 +151,6 @@ String quotaFor(String p) {
   if (p == '200') return '45';
   return '2';
 }
-
 int daysForProfile(String p) {
   if (p == '20') return 3;
   if (p == '50') return 15;
@@ -175,7 +158,6 @@ int daysForProfile(String p) {
   if (p == '200') return 30;
   return 30;
 }
-
 String bytesFor(String p) {
   if (p == '20') return '2147483648';
   if (p == '50') return '8589934592';
