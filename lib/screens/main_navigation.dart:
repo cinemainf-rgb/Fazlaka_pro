@@ -13,17 +13,15 @@ class MainNavigation extends StatefulWidget {
 
 class _MainNavigationState extends State<MainNavigation> {
   int _currentIndex = 0;
-
-  // قائمة الشاشات اللي هتتغير مع التبويبات
   late List<Widget> _screens;
 
   @override
   void initState() {
     super.initState();
     _screens = [
-      PayProTab(host: widget.host, user: widget.user, pass: widget.pass), // المكن والمبيعات
-      RouterTab(host: widget.host, user: widget.user, pass: widget.pass), // إنشاء كروت الهوتسبوت
-      const Center(child: Text('التقارير - قريباً')), // شاشة التقارير
+      PayProTab(host: widget.host, user: widget.user, pass: widget.pass),
+      RouterTab(host: widget.host, user: widget.user, pass: widget.pass),
+      const Center(child: Text('التقارير - قريباً')),
     ];
   }
 
@@ -36,14 +34,9 @@ class _MainNavigationState extends State<MainNavigation> {
         title: const Text('Fazlaka Pay', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
         centerTitle: true,
         actions: [
-          IconButton(
-            icon: const Icon(Icons.notifications, color: Colors.white),
-            onPressed: () {},
-          ),
+          IconButton(icon: const Icon(Icons.notifications, color: Colors.white), onPressed: () {}),
         ],
       ),
-      
-      // القائمة الجانبية (Drawer)
       drawer: Drawer(
         child: ListView(
           padding: EdgeInsets.zero,
@@ -68,25 +61,19 @@ class _MainNavigationState extends State<MainNavigation> {
             ListTile(
               leading: const Icon(Icons.lock, color: Colors.red),
               title: const Text('قفل البرنامج', style: TextStyle(color: Colors.red)),
-              onTap: () => Navigator.pop(context), // هنا تحط دالة القفل
+              onTap: () => Navigator.pop(context),
             ),
           ],
         ),
       ),
-
-      // محتوى الشاشة
       body: _screens[_currentIndex],
-
-      // التبويبات السفلية (زي الصورة)
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _currentIndex,
         backgroundColor: Colors.white,
         selectedItemColor: petrol,
         unselectedItemColor: Colors.grey,
         type: BottomNavigationBarType.fixed,
-        onTap: (index) {
-          setState(() { _currentIndex = index; });
-        },
+        onTap: (index) => setState(() { _currentIndex = index; }),
         items: const [
           BottomNavigationBarItem(icon: Icon(Icons.atm), label: 'المكن'),
           BottomNavigationBarItem(icon: Icon(Icons.wifi), label: 'الكروت'),
