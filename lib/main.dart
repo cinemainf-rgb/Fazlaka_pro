@@ -17,9 +17,8 @@ class FazlakaApp extends StatelessWidget {
       theme: ThemeData(
         scaffoldBackgroundColor: bgColor,
         primaryColor: petrol,
-        fontFamily: 'Cairo', // لو عايز تحمل خط عربي حلو
       ),
-      home: const SplashScreen(), // نبدأ بشاشة البصمة
+      home: const SplashScreen(),
     );
   }
 }
