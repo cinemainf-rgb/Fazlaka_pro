@@ -4,14 +4,14 @@ import 'package:crypto/crypto.dart';
 
 class MikroTikApi {
   Socket? socket;
-  List<int> buf = [];
+  List buf = [];
 
-  Future<List<Map<String, String>>> run(
+  Future run(
     String host,
     String user,
     String pass,
     String cmd,
-    [List<String> args = const []],
+    [List args = const []],
   ) async {
     try {
       return await runLogin(host, user, pass, cmd, args, true);
@@ -20,12 +20,12 @@ class MikroTikApi {
     }
   }
 
-  Future<List<Map<String, String>>> runLogin(
+  Future runLogin(
     String host,
     String user,
     String pass,
     String cmd,
-    List<String> args,
+    List args,
     bool useChallenge,
   ) async {
     buf = [];
@@ -36,8 +36,8 @@ class MikroTikApi {
       });
       if (useChallenge) {
         final chal = await loginStep(user);
-        List<int> hexToBytes(String hex) {
-          final out = <int>[];
+        List hexToBytes(String hex) {
+          final out = [];
           for (int i = 0; i < hex.length; i += 2) {
             out.add(int.parse(hex.substring(i, i + 2), radix: 16));
           }
@@ -73,8 +73,8 @@ class MikroTikApi {
     throw Exception('no challenge');
   }
 
-  Future<void> send(List<String> words) async {
-    final out = <int>[];
+  Future<void> send(List words) async {
+    final out = [];
     for (final w in words) {
       final b = utf8.encode(w);
       if (b.length < 0x80) {
@@ -94,7 +94,7 @@ class MikroTikApi {
     await socket!.flush();
   }
 
-  Future<List<Map<String, String>>> readSentence() async {
+  Future readSentence() async {
     while (true) {
       final parsed = tryParse();
       if (parsed != null) return parsed;
@@ -102,8 +102,8 @@ class MikroTikApi {
     }
   }
 
-  Future<List<Map<String, String>>> readAll() async {
-    final all = <Map<String, String>>[];
+  Future readAll() async {
+    final all = [];
     while (true) {
       final s = await readSentence();
       all.addAll(s);
@@ -112,17 +112,17 @@ class MikroTikApi {
     return all;
   }
 
-  List<Map<String, String>>? tryParse() {
+  tryParse() {
     int pos = 0;
-    final result = <Map<String, String>>[];
-    var cur = <String, String>{};
+    final result = [];
+    var cur = {};
     while (pos < buf.length) {
       int len = buf[pos];
       pos++;
       if (len == 0) {
         if (cur.isNotEmpty) {
           result.add(cur);
-          cur = <String, String>{};
+          cur = {};
         }
         buf = buf.sublist(pos);
         return result;
@@ -146,7 +146,7 @@ class MikroTikApi {
       if (word.startsWith('!')) {
         if (cur.isNotEmpty) {
           result.add(cur);
-          cur = <String, String>{};
+          cur = {};
         }
         cur['__type__'] = word;
       } else if (word.startsWith('=')) {
