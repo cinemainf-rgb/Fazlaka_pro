@@ -6,7 +6,6 @@ import '../core/colors.dart';
 class PayProTab extends StatefulWidget {
   final String host, user, pass;
   const PayProTab({super.key, required this.host, required this.user, required this.pass});
-
   @override
   State<PayProTab> createState() => _PayProTabState();
 }
@@ -15,7 +14,7 @@ class _PayProTabState extends State<PayProTab> {
   List<Map<String, dynamic>> wallets = [];
   List<Map<String, dynamic>> sales = [];
   String selectedMachine = 'فوري رئيسي';
-  
+
   final nameCtrl = TextEditingController();
   final qtyCtrl = TextEditingController();
   final buyCtrl = TextEditingController();
@@ -25,6 +24,15 @@ class _PayProTabState extends State<PayProTab> {
   void initState() {
     super.initState();
     loadData();
+  }
+
+  @override
+  void dispose() {
+    nameCtrl.dispose();
+    qtyCtrl.dispose();
+    buyCtrl.dispose();
+    sellCtrl.dispose();
+    super.dispose();
   }
 
   Future<void> loadData() async {
@@ -50,7 +58,7 @@ class _PayProTabState extends State<PayProTab> {
     if (sRaw != null) {
       sales = List<Map<String, dynamic>>.from(jsonDecode(sRaw));
     }
-    setState(() {});
+    if (mounted) setState(() {});
   }
 
   Future<void> saveData() async {
@@ -87,11 +95,7 @@ class _PayProTabState extends State<PayProTab> {
       context: context,
       builder: (_) => AlertDialog(
         title: Text('شحن - $selectedMachine'),
-        content: TextField(
-          controller: c,
-          keyboardType: TextInputType.number,
-          decoration: const InputDecoration(labelText: 'المبلغ'),
-        ),
+        content: TextField(controller: c, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'المبلغ')),
         actions: [
           TextButton(onPressed: () => Navigator.pop(context), child: const Text('الغاء')),
           TextButton(onPressed: () => Navigator.pop(context, double.tryParse(c.text) ?? 0), child: const Text('شحن')),
@@ -104,12 +108,7 @@ class _PayProTabState extends State<PayProTab> {
         if (i >= 0) {
           wallets[i]['bal'] = (wallets[i]['bal'] as num).toDouble() + amt;
         }
-        sales.insert(0, {
-          'name': 'شحن $selectedMachine',
-          'total': amt,
-          'profit': 0,
-          'date': DateTime.now().toString(),
-        });
+        sales.insert(0, {'name': 'شحن $selectedMachine', 'total': amt, 'profit': 0, 'date': DateTime.now().toString()});
       });
       await saveData();
     }
@@ -122,12 +121,7 @@ class _PayProTabState extends State<PayProTab> {
     final sell = double.tryParse(sellCtrl.text) ?? 0;
     if (name.isEmpty || qty <= 0 || sell <= 0) return;
     setState(() {
-      sales.insert(0, {
-        'name': name,
-        'total': qty * sell,
-        'profit': qty * (sell - buy),
-        'date': DateTime.now().toString(),
-      });
+      sales.insert(0, {'name': name, 'total': qty * sell, 'profit': qty * (sell - buy), 'date': DateTime.now().toString()});
       nameCtrl.clear();
       qtyCtrl.clear();
       buyCtrl.clear();
@@ -160,7 +154,6 @@ class _PayProTabState extends State<PayProTab> {
           const SizedBox(height: 10),
           _statCard('عدد العمليات', '${sales.length}', petrol, fullWidth: true),
           const SizedBox(height: 20),
-          
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(20)),
@@ -178,28 +171,7 @@ class _PayProTabState extends State<PayProTab> {
                 Wrap(
                   spacing: 10,
                   runSpacing: 10,
-                  children: wallets.where((w) => w['name'].toString().contains('فوري') || w['name'].toString().contains('بساطة') || w['name'].toString().contains('موبايل') || w['name'].toString().contains('كاش مصر')).map((w) {
-                    final isSelected = selectedMachine == w['name'];
-                    return GestureDetector(
-                      onTap: () => setState(() => selectedMachine = w['name']),
-                      child: Container(
-                        width: 100,
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                        decoration: BoxDecoration(
-                          color: isSelected ? petrol : bgColor,
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: isSelected ? petrol : petrol.withOpacity(0.2)),
-                        ),
-                        child: Column(
-                          children: [
-                            Text(w['name'], style: TextStyle(fontWeight: FontWeight.bold, color: isSelected ? Colors.white : petrol), textAlign: TextAlign.center),
-                            const SizedBox(height: 4),
-                            Text('${w['bal']}', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: isSelected ? Colors.white : Colors.black)),
-                          ],
-                        ),
-                      ),
-                    );
-                  }).toList(),
+                  children: wallets.where((w) => w['name'].toString().contains('فوري') || w['name'].toString().contains('بساطة') || w['name'].toString().contains('موبايل') || w['name'].toString().contains('كاش مصر')).map((w) => _machineBtn(w)).toList(),
                 ),
                 const SizedBox(height: 20),
                 Row(
@@ -216,9 +188,7 @@ class _PayProTabState extends State<PayProTab> {
               ],
             ),
           ),
-          
           const SizedBox(height: 20),
-          
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(20)),
@@ -241,17 +211,10 @@ class _PayProTabState extends State<PayProTab> {
                 const SizedBox(height: 10),
                 SizedBox(
                   width: double.infinity, height: 50,
-                  child: ElevatedButton(
-                    style: ElevatedButton.styleFrom(backgroundColor: petrol),
-                    onPressed: addProduct,
-                    child: const Text('إضافة منتج', style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
-                  ),
+                  child: ElevatedButton(style: ElevatedButton.styleFrom(backgroundColor: petrol), onPressed: addProduct, child: const Text('إضافة منتج', style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold))),
                 ),
                 const SizedBox(height: 12),
-                ...sales.take(5).map((s) => ListTile(
-                  title: Text(s['name'] ?? '', textAlign: TextAlign.right),
-                  trailing: Text('${s['total']} ج', style: const TextStyle(fontWeight: FontWeight.bold)),
-                )),
+                ...sales.take(5).map((s) => ListTile(title: Text(s['name'] ?? '', textAlign: TextAlign.right), trailing: Text('${s['total']} ج', style: const TextStyle(fontWeight: FontWeight.bold)))),
               ],
             ),
           ),
@@ -264,12 +227,7 @@ class _PayProTabState extends State<PayProTab> {
     return Container(
       width: fullWidth ? double.infinity : null,
       padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border(right: BorderSide(color: color, width: 4)),
-        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 10, offset: const Offset(0, 4))],
-      ),
+      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16), border: Border(right: BorderSide(color: color, width: 4)), boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 10, offset: const Offset(0, 4))]),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.end,
         children: [
@@ -281,31 +239,26 @@ class _PayProTabState extends State<PayProTab> {
     );
   }
 
-  // الدالة اللي كانت ناقصة
-  Widget _machineBtn(String name) {
-    return Container(
-      width: 100,
-      padding: const EdgeInsets.symmetric(vertical: 16),
-      decoration: BoxDecoration(
-        color: bgColor,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: petrol.withOpacity(0.2)),
-      ),
-      child: Column(
-        children: [
-          Text(name, style: const TextStyle(fontWeight: FontWeight.bold, color: petrol), textAlign: TextAlign.center),
-          const SizedBox(height: 4),
-          const Text('0', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-        ],
+  Widget _machineBtn(Map<String, dynamic> w) {
+    final isSelected = selectedMachine == w['name'];
+    return GestureDetector(
+      onTap: () => setState(() => selectedMachine = w['name']),
+      child: Container(
+        width: 100,
+        padding: const EdgeInsets.symmetric(vertical: 16),
+        decoration: BoxDecoration(color: isSelected ? petrol : bgColor, borderRadius: BorderRadius.circular(12), border: Border.all(color: isSelected ? petrol : petrol.withOpacity(0.2))),
+        child: Column(
+          children: [
+            Text(w['name'], style: TextStyle(fontWeight: FontWeight.bold, color: isSelected ? Colors.white : petrol), textAlign: TextAlign.center),
+            const SizedBox(height: 4),
+            Text('${w['bal']}', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: isSelected ? Colors.white : Colors.black)),
+          ],
+        ),
       ),
     );
   }
 
   InputDecoration _inputDecoration(String hint) {
-    return InputDecoration(
-      hintText: hint,
-      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-    );
+    return InputDecoration(hintText: hint, border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)), contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8));
   }
 }
