@@ -6,7 +6,6 @@ import 'router_tab.dart';
 class MainNavigation extends StatefulWidget {
   final String host, user, pass;
   const MainNavigation({super.key, required this.host, required this.user, required this.pass});
-
   @override
   State<MainNavigation> createState() => _MainNavigationState();
 }
@@ -33,9 +32,7 @@ class _MainNavigationState extends State<MainNavigation> {
         iconTheme: const IconThemeData(color: Colors.white),
         title: const Text('Fazlaka Pay', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
         centerTitle: true,
-        actions: [
-          IconButton(icon: const Icon(Icons.notifications, color: Colors.white), onPressed: () {}),
-        ],
+        actions: [IconButton(icon: const Icon(Icons.notifications, color: Colors.white), onPressed: () {})],
       ),
       drawer: Drawer(
         child: ListView(
