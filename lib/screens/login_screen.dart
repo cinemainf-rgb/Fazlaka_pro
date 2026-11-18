@@ -5,7 +5,6 @@ import 'main_navigation.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
-
   @override
   State<LoginScreen> createState() => _LoginScreenState();
 }
@@ -17,11 +16,18 @@ class _LoginScreenState extends State<LoginScreen> {
   bool busy = false;
   String msg = '';
 
+  @override
+  void dispose() {
+    hostCtrl.dispose();
+    userCtrl.dispose();
+    passCtrl.dispose();
+    super.dispose();
+  }
+
   Future<void> doLogin() async {
     setState(() { busy = true; msg = ''; });
     try {
       await MikroTikApi().run(hostCtrl.text.trim(), userCtrl.text.trim(), passCtrl.text, '/system/resource/print');
-      
       if (!mounted) return;
       Navigator.pushReplacement(context, MaterialPageRoute(
         builder: (_) => MainNavigation(
@@ -31,9 +37,10 @@ class _LoginScreenState extends State<LoginScreen> {
         ),
       ));
     } catch (_) {
+      if (!mounted) return;
       setState(() { msg = 'يوزر أو باسورد غلط أو السيرفر مش متاح'; });
     }
-    setState(() { busy = false; });
+    if (mounted) setState(() { busy = false; });
   }
 
   @override
@@ -60,18 +67,13 @@ class _LoginScreenState extends State<LoginScreen> {
             SizedBox(
               width: double.infinity, height: 55,
               child: ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: petrol,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                ),
+                style: ElevatedButton.styleFrom(backgroundColor: petrol, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16))),
                 onPressed: busy ? null : doLogin,
                 child: Text(busy ? 'جاري الاتصال...' : 'دخول / CONNECT', style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
               ),
             ),
-            if (msg.isNotEmpty) Padding(
-              padding: const EdgeInsets.only(top: 20),
-              child: Text(msg, style: const TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
-            ),
+            if (msg.isNotEmpty)
+              Padding(padding: const EdgeInsets.only(top: 20), child: Text(msg, style: const TextStyle(color: Colors.red, fontWeight: FontWeight.bold))),
           ],
         ),
       ),
