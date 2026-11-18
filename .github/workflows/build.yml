@@ -18,6 +18,19 @@ jobs:
           channel: stable
           cache: true
 
+      # الخطوة دي بتعمل مجلد أندرويد جديد من الصفر وتشيل القديم
+      - name: Create Fresh Android Folder
+        run: flutter create . --org com.fazlaka.paypro --project-name fazlaka_pay_pro --platforms android
+
+      # الخطوة دي بتضيف الأذونات للملف الجديد
+      - name: Add Permissions
+        run: |
+          sed -i '/<application/i \    <uses-permission android:name="android.permission.INTERNET" />\n    <uses-permission android:name="android.permission.BLUETOOTH" android:maxSdkVersion="30" />\n    <uses-permission android:name="android.permission.BLUETOOTH_ADMIN" android:maxSdkVersion="30" />\n    <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />\n    <uses-permission android:name="android.permission.BLUETOOTH_SCAN" />\n    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />\n    <uses-permission android:name="android.permission.USE_BIOMETRIC" />' android/app/src/main/AndroidManifest.xml
+
+      # الخطوة دي بتغير minSdk لـ 23 عشان البصمة
+      - name: Set Min SDK
+        run: sed -i 's/minSdkVersion flutter.minSdkVersion/minSdkVersion 23/' android/app/build.gradle
+
       - name: Install Dependencies
         run: flutter pub get
 
